@@ -1,0 +1,3 @@
+clear
+../COST/cxx neko.cc
+g++ -std=c++11 -Wall -Werror -g -o neko neko.cxx
