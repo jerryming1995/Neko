@@ -1264,7 +1264,7 @@ const int lowBW = 2;
 const int medBW = 5;                    
 const int highBW = 8;                   
 const int propagation = 1;              
-const int LearningWindowTime = 1800;     
+const int LearningWindowTime = 540;     
 const double ProbUserAgentEnabled = 1;  
 
 
@@ -1289,7 +1289,7 @@ const double ProbUserAgentEnabled = 1;
       const double Tofdm = 16*pow(10,-6);               
       const double legacyRate = 24;                     
 
-      const double Pe = 0.1;                               
+      const double Pe = 0.1;                            
 
 
 
@@ -1340,8 +1340,8 @@ const double flowActivation = 60;
 const int SearchBestAP = 180;           
 const int ChSelectionTime = 180;        
 
-const int offsetAP = 7200;
-const int offsetSTA = 7200;
+const int offsetAP = 7200;              
+const int offsetSTA = 7200;             
 
 #line 12 "neko.cc"
 
@@ -2092,11 +2092,11 @@ int Egreedy(int num_actions, std::vector<double>* reward_per_arm, std::vector<do
 	int arm_index;
 	double r_value, o_value;
 
-	if (rndProbability < epsilon) { 
+	if (rndProbability < epsilon) {
 		arm_index = rand() % num_actions;
 		printf("exploring\n");
 	}
-	else { 
+	else {
 
 		printf("exploiting\n");
 		double max_rew = 0;
@@ -2163,19 +2163,10 @@ int ThompsonSampling (int num_actions, std::vector<double>* estimated_reward, st
 
 	for (int i = 0; i < num_actions; i++) {
 
-		
 		times = times_arm_selected->at(i);
 		mean = estimated_reward->at(i);
 		variance = 1/(1+times);
 		theta[i] = gaussrand(mean,variance);
-		
-
-		
-
-
-
-
-
 	}
 
 	double max = 0;
@@ -2184,12 +2175,8 @@ int ThompsonSampling (int num_actions, std::vector<double>* estimated_reward, st
 			max = theta[i];
 			action_ix = i;
 		}
-		
-
-
 	}
 
-	
 	times_arm_selected->at(action_ix) = times_arm_selected->at(action_ix) + 1;
 	return action_ix;
 }
@@ -2272,7 +2259,7 @@ struct Connection{
 #include <string>
 
 
-#line 790 "ap.h"
+#line 645 "ap.h"
 #endif
 
 #line 18 "neko.cc"
@@ -2295,7 +2282,7 @@ struct Connection{
 
 
 
-#line 615 "station.h"
+#line 507 "station.h"
 #endif
 
 #line 19 "neko.cc"
@@ -2407,7 +2394,7 @@ public:
   std::vector<double> reward_action;                            
   std::vector<double> occupancy_CH;                             
   std::vector<double> estimated_reward_action;
-  std::vector<int> TimesActionIsPicked;                         
+  std::vector<int> TimesActionIsPicked;                               
   std::vector< std::vector<double> > estimated_reward_Per_action;    
   std::vector< std::vector<double> > estimated_reward_Per_action_Time;
 
@@ -2419,10 +2406,9 @@ public:
 
   std::vector<int> ActionChange;
   std::vector<double> TimeStamp;
-  std::vector<double> Mean_occ;
 
   double iter;
-  int flag, isolation, bestChannel, congestion;
+  int flag, isolation;
 
 public:
 
@@ -2589,16 +2575,15 @@ public:
   std::vector<int> Times_ActionSelected;                            
   std::vector<int> Action_Selected;                                 
   std::vector<int> ActionChange;
-  std::vector<float> TimeStamp;
+  std::vector<double> TimeStamp;
+  std::vector<double> Throughput;
 
   std::vector< std::vector<double> > estimated_reward_Per_action;    
   std::vector< std::vector<double> > estimated_reward_Per_action_Time;
 
-  std::vector<double> Mean;
+  std::vector<double> mSat;
   std::vector<double> timeSim;                                      
   std::vector<double> timeSim2;                                     
-  
-  
 
   
   double iter;
@@ -2837,13 +2822,13 @@ public:
 
 
 
+#line 93 "ap.h"
+
 #line 94 "ap.h"
 
 #line 95 "ap.h"
 
-#line 96 "ap.h"
-
-#line 99 "ap.h"
+#line 98 "ap.h"
 compcxx_AP_9 :: compcxx_AP_9(){
   trigger_Action.p_compcxx_parent=this /*connect trigger_Action.to_component,*/;
   trigger_APBootUp.p_compcxx_parent=this /*connect trigger_APBootUp.to_component,*/;
@@ -2851,13 +2836,13 @@ compcxx_AP_9 :: compcxx_AP_9(){
 }
 
 
-#line 105 "ap.h"
+#line 104 "ap.h"
 void compcxx_AP_9 :: Setup(){
 
 }
 
 
-#line 109 "ap.h"
+#line 108 "ap.h"
 void compcxx_AP_9 :: Start(){
 
   switch (IEEEprotocolType) {
@@ -2915,67 +2900,18 @@ void compcxx_AP_9 :: Start(){
   }
 
   iter = 1;
-  flag = 1;
+  flag = 0;
   isolation = 0;
 }
 
 
-#line 170 "ap.h"
+#line 169 "ap.h"
 void compcxx_AP_9 :: Stop(){
-
-
-  int TimeWrap = 3600;
-  double pos = runTimeSim/TimeWrap;
-  int step = 0;
-  int count = 0;
-  int endVal = TimeWrap-1;
-  double tmp_mean = 0;
-  double m = 0;
-
-  for (int k=0; k<pos; k++){
-    for (int init=0; init<(int)TimeSimulation.size(); init++){
-      if (step <= TimeSimulation.at(init) && TimeSimulation.at(init) < endVal){
-        tmp_mean = tmp_mean + occupanyOfAp.at(init);
-        count = count + 1;
-      }
-    }
-    m = tmp_mean/count;
-    
-    Mean_occ.push_back(m);
-
-    tmp_mean = 0;
-    m = 0;
-    count = 0;
-    step = step+TimeWrap;
-    endVal = endVal+TimeWrap;
-  }
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 }
 
 
-#line 223 "ap.h"
+#line 173 "ap.h"
 void compcxx_AP_9 :: APBootUp(trigger_t&){
 
   double *selectConfiguration = GetConfiguration(IEEEprotocolType, actionSelected);
@@ -2983,12 +2919,6 @@ void compcxx_AP_9 :: APBootUp(trigger_t&){
   channelBW = *selectConfiguration;
   OperatingChannel = *(selectConfiguration+1);
   frequency = *(selectConfiguration+2);
-
-  
-
-  
-
-  
 
   APBeacon beacon;
 
@@ -3003,7 +2933,6 @@ void compcxx_AP_9 :: APBootUp(trigger_t&){
 
   if (isolation == 0) {
     (outSetNeighbors_f(beacon));
-    
   }
 
   (outSendBeaconToNodes_f(beacon));
@@ -3037,33 +2966,27 @@ void compcxx_AP_9 :: APBootUp(trigger_t&){
       estimated_reward_Per_action.resize(size);
       estimated_reward_Per_action_Time.resize(size);
 
-      
-
-
-
-        trigger_Action.Set(SimTime()+Exponential(2)+offsetAP);
-      
+      trigger_Action.Set(SimTime()+Exponential(2)+offsetAP);
 
     }break;
   }
 }
 
 
-#line 295 "ap.h"
+#line 233 "ap.h"
 void compcxx_AP_9 :: inSetNeighbors (APBeacon &b){
 
   double RSSIvalue;
   RSSIvalue = txPower - PropL(b.header.X,b.header.Y,b.header.Z,X,Y,Z,b.freq);
 
   if (RSSIvalue>=CCA){
-    
     vectorOfNeighboringAPs.push_back(b.header.sourceID);
     vectorOfNeighboringRSSIs.push_back(RSSIvalue);
   }
 }
 
 
-#line 307 "ap.h"
+#line 244 "ap.h"
 void compcxx_AP_9 :: inSetClientAssociation (StationInfo &s){
 
   if (s.header.destinationID == apID){
@@ -3075,13 +2998,11 @@ void compcxx_AP_9 :: inSetClientAssociation (StationInfo &s){
 }
 
 
-#line 317 "ap.h"
+#line 254 "ap.h"
 void compcxx_AP_9 :: inRequestedAirTime(Connection &STARequest){
 
   if (apID == STARequest.header.destinationID){
     trafficLoad = trafficLoad + STARequest.LoadByStation;
-    
-    
 
     Connection APResponse;
     APResponse.header.sourceID = apID;
@@ -3121,13 +3042,11 @@ void compcxx_AP_9 :: inRequestedAirTime(Connection &STARequest){
 }
 
 
-#line 361 "ap.h"
+#line 296 "ap.h"
 void compcxx_AP_9 :: inTxTimeFinished(Connection &EndConn){
 
   if (apID == EndConn.header.destinationID){
     trafficLoad = trafficLoad - EndConn.LoadByStation;
-    
-    
 
     if (trafficLoad < 0.00001){
       trafficLoad = 0;
@@ -3173,7 +3092,7 @@ void compcxx_AP_9 :: inTxTimeFinished(Connection &EndConn){
 }
 
 
-#line 411 "ap.h"
+#line 344 "ap.h"
 void compcxx_AP_9 :: inLoadFromNeighbor(ApNotification &notification){
 
   if (apID == notification.header.destinationID){
@@ -3191,7 +3110,6 @@ void compcxx_AP_9 :: inLoadFromNeighbor(ApNotification &notification){
       if (overlapping == 1){
         CH_occupancy_detected.at(Neighbor_CH_index) = CH_occupancy_detected.at(Neighbor_CH_index)+notification.Load;
         trafficLoad = trafficLoad + notification.Load;
-        
       }
       else{
         CH_occupancy_detected.at(Neighbor_CH_index) = CH_occupancy_detected.at(Neighbor_CH_index)+notification.Load;
@@ -3203,7 +3121,6 @@ void compcxx_AP_9 :: inLoadFromNeighbor(ApNotification &notification){
         if (trafficLoad < 0.00001){
           trafficLoad = 0;
         }
-        
         CH_occupancy_detected.at(Neighbor_CH_index) = CH_occupancy_detected.at(Neighbor_CH_index)-notification.Load;
         if (CH_occupancy_detected.at(Neighbor_CH_index) < 0.00001){
           CH_occupancy_detected.at(Neighbor_CH_index) = 0;
@@ -3243,7 +3160,7 @@ void compcxx_AP_9 :: inLoadFromNeighbor(ApNotification &notification){
 }
 
 
-#line 479 "ap.h"
+#line 410 "ap.h"
 void compcxx_AP_9 :: inUpdateConnection(StationInfo &info, int oldAP){
 
   if (apID == oldAP){
@@ -3277,7 +3194,7 @@ void compcxx_AP_9 :: inUpdateConnection(StationInfo &info, int oldAP){
 }
 
 
-#line 511 "ap.h"
+#line 442 "ap.h"
 void compcxx_AP_9 :: inUpdateAttachedStationsParams (StationInfo &info){
 
   if (info.header.destinationID == apID){
@@ -3290,7 +3207,7 @@ void compcxx_AP_9 :: inUpdateAttachedStationsParams (StationInfo &info){
 }
 
 
-#line 522 "ap.h"
+#line 453 "ap.h"
 void compcxx_AP_9 :: CHselectionBylearning(trigger_t&){
 
   int lastAction = actionSelected;
@@ -3390,172 +3307,96 @@ void compcxx_AP_9 :: CHselectionBylearning(trigger_t&){
 
     case 2:{
       if (flag == 0){
-        int i = rand()%num_arms;
-        actionSelected = setOfactions.at(i);
-        TimesActionIsPicked[i] = TimesActionIsPicked[i] + 1;
+        estimated_reward_action[index] = ((estimated_reward_action[index] * TimesActionIsPicked[index]) + (reward_action[index])) / (TimesActionIsPicked[index] + 2);
+        estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
+        estimated_reward_Per_action_Time[index].push_back(SimTime());
+        actionSelected = setOfactions.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_CH, &TimesActionIsPicked));
 
         flag++;
       }
       else{
-
-      
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          reward_action[index] = GetReward(lastAction, &channel_reward, &Action_Selected, &TimeSimulation, SimTime());
-          occupancy_CH[index] = GetOccupancy(lastAction, &occupanyOfAp, &Action_Selected, &TimeSimulation, SimTime());
-          estimated_reward_action[index] = ((estimated_reward_action[index] * TimesActionIsPicked[index]) + (reward_action[index])) / (TimesActionIsPicked[index] + 2);
-          estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
-          estimated_reward_Per_action_Time[index].push_back(SimTime());
-          actionSelected = setOfactions.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_CH, &TimesActionIsPicked));
-
-          for (int i=0; i<(int)CHMapToAction.size();i++){
-            int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
-            if (overlap ==1){
-              trafficLoad = trafficLoad-CH_occupancy_detected.at(i);
-              if (trafficLoad < 0.00001){
-                trafficLoad = 0;
-              }
-            }
-          }
-
-          double* selectedConfiguration = GetConfiguration(IEEEprotocolType, actionSelected);
-          channelBW = *selectedConfiguration;
-          OperatingChannel = *(selectedConfiguration+1);
-          frequency = *(selectedConfiguration+2);
-
-          if ((int)vectorOfNeighboringAPs.size() != 0){
-            for (int n=0;n<(int)vectorOfNeighboringAPs.size();n++){
-              if(trafficLoad != 0){
-
-                ApNotification RemoveLoad;
-                RemoveLoad.Load = trafficLoad;
-                RemoveLoad.ChannelNumber = CHMapToAction.at(index);
-                RemoveLoad.flag = 0;
-                RemoveLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
-                (outLoadToNeighbor_f(RemoveLoad));
-
-
-                ApNotification AddLoad;
-                AddLoad.Load = trafficLoad;
-                AddLoad.ChannelNumber = OperatingChannel;
-                AddLoad.flag = 1;
-                AddLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
-                (outLoadToNeighbor_f(AddLoad));
-              }
-            }
-          }
-
-          for (int i=0; i<(int)CHMapToAction.size();i++){
-            int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
-            if (overlap ==1){
-              trafficLoad = trafficLoad+CH_occupancy_detected.at(i);
-            }
-          }
-
-          for (int i=0;i<(int)vectorOfConnectedStations.size();i++){
-            APBeacon beacon;
-            beacon.header.destinationID = vectorOfConnectedStations.at(i);
-            beacon.header.sourceID = apID;
-            beacon.header.X = X;
-            beacon.header.Y = Y;
-            beacon.header.Z = Z;
-            beacon.Tx_Power = txPower;
-            beacon.freq = frequency;
-            beacon.protocolType = IEEEprotocolType;
-            beacon.BW = channelBW;
-            (outChannelChange_f(beacon));
-
-            Connection update;
-            update.header.sourceID = apID;
-            update.header.destinationID = vectorOfConnectedStations.at(i);
-            update.Ap_Load = trafficLoad;
-            (outAssignAirTime_f(update));
-          }
-
-          ActionChange.push_back(actionSelected);
-          TimeStamp.push_back(SimTime());
-
-          trigger_Action.Set(SimTime()+ChSelectionTime);
-        
+        reward_action[index] = GetReward(lastAction, &channel_reward, &Action_Selected, &TimeSimulation, SimTime());
+        occupancy_CH[index] = GetOccupancy(lastAction, &occupanyOfAp, &Action_Selected, &TimeSimulation, SimTime());
+        estimated_reward_action[index] = ((estimated_reward_action[index] * TimesActionIsPicked[index]) + (reward_action[index])) / (TimesActionIsPicked[index] + 2);
+        estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
+        estimated_reward_Per_action_Time[index].push_back(SimTime());
+        actionSelected = setOfactions.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_CH, &TimesActionIsPicked));
       }
+
+      for (int i=0; i<(int)CHMapToAction.size();i++){
+        int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
+        if (overlap ==1){
+          trafficLoad = trafficLoad-CH_occupancy_detected.at(i);
+          if (trafficLoad < 0.00001){
+            trafficLoad = 0;
+          }
+        }
+      }
+
+      double* selectedConfiguration = GetConfiguration(IEEEprotocolType, actionSelected);
+      channelBW = *selectedConfiguration;
+      OperatingChannel = *(selectedConfiguration+1);
+      frequency = *(selectedConfiguration+2);
+
+      if ((int)vectorOfNeighboringAPs.size() != 0){
+        for (int n=0;n<(int)vectorOfNeighboringAPs.size();n++){
+          if(trafficLoad != 0){
+
+            ApNotification RemoveLoad;
+            RemoveLoad.Load = trafficLoad;
+            RemoveLoad.ChannelNumber = CHMapToAction.at(index);
+            RemoveLoad.flag = 0;
+            RemoveLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
+            (outLoadToNeighbor_f(RemoveLoad));
+
+
+            ApNotification AddLoad;
+            AddLoad.Load = trafficLoad;
+            AddLoad.ChannelNumber = OperatingChannel;
+            AddLoad.flag = 1;
+            AddLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
+            (outLoadToNeighbor_f(AddLoad));
+          }
+        }
+      }
+
+      for (int i=0; i<(int)CHMapToAction.size();i++){
+        int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
+        if (overlap ==1){
+          trafficLoad = trafficLoad+CH_occupancy_detected.at(i);
+        }
+      }
+
+      for (int i=0;i<(int)vectorOfConnectedStations.size();i++){
+        APBeacon beacon;
+        beacon.header.destinationID = vectorOfConnectedStations.at(i);
+        beacon.header.sourceID = apID;
+        beacon.header.X = X;
+        beacon.header.Y = Y;
+        beacon.header.Z = Z;
+        beacon.Tx_Power = txPower;
+        beacon.freq = frequency;
+        beacon.protocolType = IEEEprotocolType;
+        beacon.BW = channelBW;
+        (outChannelChange_f(beacon));
+
+        Connection update;
+        update.header.sourceID = apID;
+        update.header.destinationID = vectorOfConnectedStations.at(i);
+        update.Ap_Load = trafficLoad;
+        (outAssignAirTime_f(update));
+      }
+
+      ActionChange.push_back(actionSelected);
+      TimeStamp.push_back(SimTime());
+
+      trigger_Action.Set(SimTime()+ChSelectionTime);
     }break;
   }
 }
 
 
-#line 785 "ap.h"
+#line 640 "ap.h"
 void compcxx_AP_9 :: ProgressFunct(trigger_t&){
   printf("Progress: %f\n", (SimTime()/(double)86400)*100);
   trigger_progress.Set(SimTime()+4320);
@@ -3790,15 +3631,15 @@ void compcxx_AP_9 :: ProgressFunct(trigger_t&){
 
 
 
+#line 94 "station.h"
+
 #line 95 "station.h"
 
 #line 96 "station.h"
 
 #line 97 "station.h"
 
-#line 98 "station.h"
-
-#line 102 "station.h"
+#line 101 "station.h"
 compcxx_Station_10 :: compcxx_Station_10(){
   trigger_ProcessBeacons.p_compcxx_parent=this /*connect trigger_ProcessBeacons.to_component,*/;
   trigger_SendRequestedAT.p_compcxx_parent=this /*connect trigger_SendRequestedAT.to_component,*/;
@@ -3807,22 +3648,22 @@ compcxx_Station_10 :: compcxx_Station_10(){
 }
 
 
-#line 109 "station.h"
+#line 108 "station.h"
 void compcxx_Station_10 :: Setup(){
 
 }
 
 
-#line 113 "station.h"
+#line 112 "station.h"
 void compcxx_Station_10 :: Start(){
   iter = 1;
-  flag = 1;
+  flag = 0;
   TimeSizeF = 0;
   TimeSizeS = 0;
 }
 
 
-#line 120 "station.h"
+#line 119 "station.h"
 void compcxx_Station_10 :: Stop(){
 
   int TimeWrap = 900;
@@ -3842,7 +3683,7 @@ void compcxx_Station_10 :: Stop(){
     }
     m = tmp_mean/count;
 
-    Mean.push_back(m);
+    mSat.push_back(m);
 
     tmp_mean = 0;
     m = 0;
@@ -3850,80 +3691,22 @@ void compcxx_Station_10 :: Stop(){
     step = step+TimeWrap;
     endVal = endVal+TimeWrap;
   }
-
-
-  
-
-
-
-
-
 }
 
 
-#line 157 "station.h"
+#line 148 "station.h"
 void compcxx_Station_10 :: inReceivedBeacon(APBeacon &b){
 
   detectedWLANs.push_back(b);
   trigger_ProcessBeacons.Set(SimTime()+0.001);
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
 
 
-#line 213 "station.h"
+#line 154 "station.h"
 void compcxx_Station_10 :: ProcessBeacons(trigger_t&){
 
   StationInfo info;
-  
+
   std::vector<double>RSSIvalueUL;
   std::vector<double>DLDataRates;
   std::vector<double>ULDataRates;
@@ -3936,8 +3719,6 @@ void compcxx_Station_10 :: ProcessBeacons(trigger_t&){
 
       APBeacon b = detectedWLANs.front();
       tmpRSSIvalueUL = txPower - PropL(X, Y, Z, b.header.X, b.header.Y, b.header.Z, b.freq);
-      
-      
 
       if (tmpRSSIvalueUL> -80){
 
@@ -3960,18 +3741,6 @@ void compcxx_Station_10 :: ProcessBeacons(trigger_t&){
       }
       detectedWLANs.pop_front();
     }
-
-    
-
-
-
-
-
-
-
-
-
-
   }
 
   switch (stationLearningFlag) {
@@ -3990,9 +3759,6 @@ void compcxx_Station_10 :: ProcessBeacons(trigger_t&){
             ULDataRate = ULDataRates.at(i);
           }
         }
-
-        
-        
 
         info.header.sourceID = staID;
         info.header.destinationID = servingAP;
@@ -4024,9 +3790,6 @@ void compcxx_Station_10 :: ProcessBeacons(trigger_t&){
             ULDataRate = ULDataRates.at(i);
           }
         }
-
-        
-        printf("*******\n");
 
         info.header.sourceID = staID;
         info.header.destinationID = servingAP;
@@ -4070,9 +3833,6 @@ void compcxx_Station_10 :: ProcessBeacons(trigger_t&){
         info.RSSI = RSSI_UL;
         (outSetClientAssociation_f(info));
 
-        
-        
-
         if ((size > 1)&&(userType == 2)){
           trigger_Action.Set(SimTime()+offsetSTA);
         }
@@ -4088,7 +3848,7 @@ void compcxx_Station_10 :: ProcessBeacons(trigger_t&){
 }
 
 
-#line 380 "station.h"
+#line 298 "station.h"
 void compcxx_Station_10 :: SendRequestedAT(trigger_t&){
 
   double TimeMPDU, Tack, Trts, Tcts, LDBPS_DL, LDBPS_UL;
@@ -4144,7 +3904,7 @@ void compcxx_Station_10 :: SendRequestedAT(trigger_t&){
 }
 
 
-#line 434 "station.h"
+#line 352 "station.h"
 void compcxx_Station_10 :: inAssignedAirTime(Connection &response){
 
   if (staID == response.header.destinationID){
@@ -4167,18 +3927,17 @@ void compcxx_Station_10 :: inAssignedAirTime(Connection &response){
 }
 
 
-#line 455 "station.h"
+#line 373 "station.h"
 void compcxx_Station_10 :: SendTxTimeFinished(trigger_t&){
 
   finishTX = SimTime();
   TimeSizeF = (int)timeSim2.size();
   int size = TimeSizeF-TimeSizeS;
+  double throughput = GetData(FlowType, TimeSizeS, size, &Satisfaction, requestedBW);
 
+  Throughput.push_back(throughput);
   bits_Sent = bits_Sent + (GetData(FlowType, TimeSizeS, size, &Satisfaction, requestedBW)*(finishTX-startTX));
   totalBits = totalBits + (requestedBW*(finishTX-startTX));
-  timeActive = timeActive + (finishTX-startTX);
-  
-  
   
 
   Connection ConnFinish;
@@ -4196,7 +3955,7 @@ void compcxx_Station_10 :: SendTxTimeFinished(trigger_t&){
 }
 
 
-#line 482 "station.h"
+#line 399 "station.h"
 void compcxx_Station_10 :: inUpdateStationParameters(APBeacon &b){
 
   if (staID == b.header.destinationID){
@@ -4221,7 +3980,7 @@ void compcxx_Station_10 :: inUpdateStationParameters(APBeacon &b){
 }
 
 
-#line 505 "station.h"
+#line 422 "station.h"
 void compcxx_Station_10 :: APselectionBylearning(trigger_t&){
 
   if (trigger_TxTimeFinished.Active() == 0){
@@ -4257,18 +4016,6 @@ void compcxx_Station_10 :: APselectionBylearning(trigger_t&){
           (outUpdateConnection_f(hello, oldAP));
         }
 
-        
-
-
-
-
-
-
-
-
-
-
-
         ActionChange.push_back(servingAP);
         TimeStamp.push_back(SimTime());
 
@@ -4280,17 +4027,16 @@ void compcxx_Station_10 :: APselectionBylearning(trigger_t&){
       case 2:{  
 
         if (flag == 0){
-          int i = rand()%num_arms;
-          servingAP = CandidateAPs.at(i);
-          
-          Times_ActionSelected[i] = Times_ActionSelected[i] + 1;
+          estimated_reward_action[index] = ((estimated_reward_action[index] * Times_ActionSelected[index]) + (reward_action[index]))/ (Times_ActionSelected[index] + 2);
+          estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
+          estimated_reward_Per_action_Time[index].push_back(SimTime());
+          servingAP = CandidateAPs.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_AP, &Times_ActionSelected));
           flag++;
         }
         else{
           reward_action[index] = GetReward(servingAP, &Satisfaction, &Action_Selected, &timeSim2, SimTime());
           occupancy_AP[index] = (GetOccupancy(servingAP, &CandidateAPsTrafficLoad, &Action_Selected, &timeSim2, SimTime()))/100;
           estimated_reward_action[index] = ((estimated_reward_action[index] * Times_ActionSelected[index]) + (reward_action[index]))/ (Times_ActionSelected[index] + 2);
-          
           estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
           estimated_reward_Per_action_Time[index].push_back(SimTime());
           servingAP = CandidateAPs.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_AP, &Times_ActionSelected));
@@ -4304,18 +4050,6 @@ void compcxx_Station_10 :: APselectionBylearning(trigger_t&){
         if (oldAP != servingAP){
           (outUpdateConnection_f(hello, oldAP));
         }
-
-        
-        
-
-        
-        
-          
-        
-
-        
-        
-        
 
         ActionChange.push_back(servingAP);
         TimeStamp.push_back(SimTime());
@@ -4338,37 +4072,9 @@ void compcxx_Neko_11 :: Setup(){
 
   if (rnd == 1){
     GenerateRandom();
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
   }
   else{
     LoadScenario();
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
   }
 
   for (int j=0; j<numOfStations; j++){
@@ -4397,143 +4103,29 @@ void compcxx_Neko_11 :: Setup(){
 }
 
 
-#line 107 "neko.cc"
+#line 79 "neko.cc"
 void compcxx_Neko_11 :: Start(){
 
   
 }
 
 
-#line 112 "neko.cc"
+#line 84 "neko.cc"
 void compcxx_Neko_11 :: Stop(){
 
-  
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
   FILE* pFileSTATS = fopen("../Output/STATS.txt","a");
-  
-  
-
-  
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-  
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-  std::vector<double> mean;
+  float tmpSat, tmpTh, tmpDRatio, simSat, simTh, simDRatio;
+  std::vector<double> mean_Satisfaction;
   double m_val = 0;
 
-  for (int i=0; i<(int)STA_container[0].Mean.size(); i++){
+  for (int i=0; i<(int)STA_container[0].mSat.size(); i++){
     for (int j=0; j<numOfStations; j++){
-      m_val += STA_container[j].Mean.at(i);
+      m_val += STA_container[j].mSat.at(i);
     }
-    
-    mean.push_back(m_val/numOfStations);
+
+    mean_Satisfaction.push_back(m_val/numOfStations);
     m_val = 0;
   }
-
-  std::vector<double> occ;
-  double o_val = 0;
-
-  for (int i=0; i<(int)APoint_container[0].Mean_occ.size(); i++){
-    for (int j=0; j<numOfAPs; j++){
-      o_val += APoint_container[j].Mean_occ.at(i);
-    }
-
-    occ.push_back(o_val/numOfAPs);
-    o_val = 0;
-  }
-  float tmpSat, tmpTh, tmpDRatio, simSat, simTh, simDRatio;
 
   simTh = 0;
   simDRatio = 0;
@@ -4543,80 +4135,27 @@ void compcxx_Neko_11 :: Stop(){
   tmpTh = 0;
   tmpDRatio = 0;
 
-  for (int i=0; i<(int)mean.size(); i++){
-    tmpSat += mean.at(i);
+  for (int i=0; i<(int)mean_Satisfaction.size(); i++){
+    tmpSat += mean_Satisfaction.at(i);
   }
 
-  simSat = tmpSat/(int)mean.size();
+  simSat = tmpSat/(int)mean_Satisfaction.size();
 
   for (int i=0; i<numOfStations; i++){
-    tmpTh += STA_container[i].bits_Sent/runTimeSim;
+    tmpTh += std::accumulate(STA_container[i].Throughput.begin(),STA_container[i].Throughput.end(), 0.0)/(int)STA_container[i].Throughput.size();
     tmpDRatio += 1-(STA_container[i].bits_Sent/STA_container[i].totalBits);
   }
 
   simTh = tmpTh;
   simDRatio = tmpDRatio/numOfStations;
-
+  printf("Th: %f\n", simTh);
   fprintf(pFileSTATS, "%i; %f; %f; %f\n", seed, simSat, simTh, (simDRatio*100));
 
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   fclose(pFileSTATS);
 }
 
 
-#line 322 "neko.cc"
+#line 127 "neko.cc"
 void compcxx_Neko_11 :: GenerateRandom(){
 
   int Xaxis = 30;
@@ -4625,7 +4164,7 @@ void compcxx_Neko_11 :: GenerateRandom(){
   int index = 0;
   int stationsPerAP = 15;
 
-  numOfAPs = 15;
+  numOfAPs = 20;
   numOfStations = numOfAPs*stationsPerAP;
 
   APoint_container.SetSize(numOfAPs);
@@ -4655,7 +4194,7 @@ void compcxx_Neko_11 :: GenerateRandom(){
         float propL = PropL(tmpX,tmpY,tmpZ,APoint_container[i].X,APoint_container[i].Y,APoint_container[i].Z, 5.32);
         float RSSI = 15-propL;
 
-        if ((-75 <= RSSI) && (RSSI < -45)){
+        if ((-80 <= RSSI) && (RSSI < -45)){
           STA_container[index].staID = index;
           STA_container[index].X = tmpX;
           STA_container[index].Y = tmpY;
@@ -4682,7 +4221,7 @@ void compcxx_Neko_11 :: GenerateRandom(){
 }
 
 
-#line 386 "neko.cc"
+#line 191 "neko.cc"
 void compcxx_Neko_11 :: LoadScenario(){
 
   FILE* inputFileName = fopen("../Input/Inputfile.txt", "r");
@@ -4743,7 +4282,7 @@ void compcxx_Neko_11 :: LoadScenario(){
 }
 
 
-#line 445 "neko.cc"
+#line 250 "neko.cc"
 int main(int argc, char *argv[]){
 
   compcxx_Neko_11 test;

@@ -35,7 +35,7 @@ const double ProbUserAgentEnabled = 1;  //Probability of having agent-enabled us
       const double Tofdm = 16*pow(10,-6);               //Symbol duration 12.8usec + 3.2usec long GI
       const double legacyRate = 24;                     //bits/symbol --> minimum modulation MCS0,1 or 2
 
-      const double Pe = 0.1;                               //Packet error rate
+      const double Pe = 0.1;                            //Packet error rate
 
 /* --> For 802.11ac
       const int packetLength = 12000;

@@ -84,7 +84,7 @@ void Neko :: Start(){
 void Neko :: Stop(){
 
   FILE* pFileSTATS = fopen("../Output/STATS.txt","a");
-
+  float tmpSat, tmpTh, tmpDRatio, simSat, simTh, simDRatio;
   std::vector<double> mean_Satisfaction;
   double m_val = 0;
 
@@ -92,7 +92,7 @@ void Neko :: Stop(){
     for (int j=0; j<numOfStations; j++){
       m_val += STA_container[j].mSat.at(i);
     }
-    
+
     mean_Satisfaction.push_back(m_val/numOfStations);
     m_val = 0;
   }
@@ -112,15 +112,15 @@ void Neko :: Stop(){
   simSat = tmpSat/(int)mean_Satisfaction.size();
 
   for (int i=0; i<numOfStations; i++){
-    tmpTh += STA_container[i].bits_Sent/runTimeSim;
+    tmpTh += std::accumulate(STA_container[i].Throughput.begin(),STA_container[i].Throughput.end(), 0.0)/(int)STA_container[i].Throughput.size();
     tmpDRatio += 1-(STA_container[i].bits_Sent/STA_container[i].totalBits);
   }
 
   simTh = tmpTh;
   simDRatio = tmpDRatio/numOfStations;
-
+  printf("Th: %f\n", simTh);
   fprintf(pFileSTATS, "%i; %f; %f; %f\n", seed, simSat, simTh, (simDRatio*100));
-  
+
   fclose(pFileSTATS);
 }
 
@@ -132,7 +132,7 @@ void Neko :: GenerateRandom(){
   int index = 0;
   int stationsPerAP = 15;
 
-  numOfAPs = 15;
+  numOfAPs = 20;
   numOfStations = numOfAPs*stationsPerAP;
 
   APoint_container.SetSize(numOfAPs);
@@ -162,7 +162,7 @@ void Neko :: GenerateRandom(){
         float propL = PropL(tmpX,tmpY,tmpZ,APoint_container[i].X,APoint_container[i].Y,APoint_container[i].Z, 5.32);
         float RSSI = 15-propL;
 
-        if ((-75 <= RSSI) && (RSSI < -45)){
+        if ((-80 <= RSSI) && (RSSI < -45)){
           STA_container[index].staID = index;
           STA_container[index].X = tmpX;
           STA_container[index].Y = tmpY;

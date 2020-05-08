@@ -163,6 +163,7 @@ void AP :: Start(){
 
   iter = 1;
   flag = 0;
+  isolation = 0;
 }
 
 void AP :: Stop(){
@@ -548,90 +549,90 @@ void AP :: CHselectionBylearning(trigger_t&){
 
     case 2:{
       if (flag == 0){
-        int i = rand()%num_arms;
-        actionSelected = setOfactions.at(i);
-        TimesActionIsPicked[i] = TimesActionIsPicked[i] + 1;
+        estimated_reward_action[index] = ((estimated_reward_action[index] * TimesActionIsPicked[index]) + (reward_action[index])) / (TimesActionIsPicked[index] + 2);
+        estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
+        estimated_reward_Per_action_Time[index].push_back(SimTime());
+        actionSelected = setOfactions.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_CH, &TimesActionIsPicked));
 
         flag++;
       }
       else{
-
         reward_action[index] = GetReward(lastAction, &channel_reward, &Action_Selected, &TimeSimulation, SimTime());
         occupancy_CH[index] = GetOccupancy(lastAction, &occupanyOfAp, &Action_Selected, &TimeSimulation, SimTime());
         estimated_reward_action[index] = ((estimated_reward_action[index] * TimesActionIsPicked[index]) + (reward_action[index])) / (TimesActionIsPicked[index] + 2);
         estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
         estimated_reward_Per_action_Time[index].push_back(SimTime());
         actionSelected = setOfactions.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_CH, &TimesActionIsPicked));
-
-        for (int i=0; i<(int)CHMapToAction.size();i++){
-          int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
-          if (overlap ==1){
-            trafficLoad = trafficLoad-CH_occupancy_detected.at(i);
-            if (trafficLoad < 0.00001){
-              trafficLoad = 0;
-            }
-          }
-        }
-
-        double* selectedConfiguration = GetConfiguration(IEEEprotocolType, actionSelected);
-        channelBW = *selectedConfiguration;
-        OperatingChannel = *(selectedConfiguration+1);
-        frequency = *(selectedConfiguration+2);
-
-        if ((int)vectorOfNeighboringAPs.size() != 0){
-          for (int n=0;n<(int)vectorOfNeighboringAPs.size();n++){
-            if(trafficLoad != 0){
-
-              ApNotification RemoveLoad;
-              RemoveLoad.Load = trafficLoad;
-              RemoveLoad.ChannelNumber = CHMapToAction.at(index);
-              RemoveLoad.flag = 0;
-              RemoveLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
-              outLoadToNeighbor(RemoveLoad);
-
-
-              ApNotification AddLoad;
-              AddLoad.Load = trafficLoad;
-              AddLoad.ChannelNumber = OperatingChannel;
-              AddLoad.flag = 1;
-              AddLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
-              outLoadToNeighbor(AddLoad);
-            }
-          }
-        }
-
-        for (int i=0; i<(int)CHMapToAction.size();i++){
-          int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
-          if (overlap ==1){
-            trafficLoad = trafficLoad+CH_occupancy_detected.at(i);
-          }
-        }
-
-        for (int i=0;i<(int)vectorOfConnectedStations.size();i++){
-          APBeacon beacon;
-          beacon.header.destinationID = vectorOfConnectedStations.at(i);
-          beacon.header.sourceID = apID;
-          beacon.header.X = X;
-          beacon.header.Y = Y;
-          beacon.header.Z = Z;
-          beacon.Tx_Power = txPower;
-          beacon.freq = frequency;
-          beacon.protocolType = IEEEprotocolType;
-          beacon.BW = channelBW;
-          outChannelChange(beacon);
-
-          Connection update;
-          update.header.sourceID = apID;
-          update.header.destinationID = vectorOfConnectedStations.at(i);
-          update.Ap_Load = trafficLoad;
-          outAssignAirTime(update);
-        }
-
-        ActionChange.push_back(actionSelected);
-        TimeStamp.push_back(SimTime());
-
-        trigger_Action.Set(SimTime()+ChSelectionTime);
       }
+
+      for (int i=0; i<(int)CHMapToAction.size();i++){
+        int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
+        if (overlap ==1){
+          trafficLoad = trafficLoad-CH_occupancy_detected.at(i);
+          if (trafficLoad < 0.00001){
+            trafficLoad = 0;
+          }
+        }
+      }
+
+      double* selectedConfiguration = GetConfiguration(IEEEprotocolType, actionSelected);
+      channelBW = *selectedConfiguration;
+      OperatingChannel = *(selectedConfiguration+1);
+      frequency = *(selectedConfiguration+2);
+
+      if ((int)vectorOfNeighboringAPs.size() != 0){
+        for (int n=0;n<(int)vectorOfNeighboringAPs.size();n++){
+          if(trafficLoad != 0){
+
+            ApNotification RemoveLoad;
+            RemoveLoad.Load = trafficLoad;
+            RemoveLoad.ChannelNumber = CHMapToAction.at(index);
+            RemoveLoad.flag = 0;
+            RemoveLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
+            outLoadToNeighbor(RemoveLoad);
+
+
+            ApNotification AddLoad;
+            AddLoad.Load = trafficLoad;
+            AddLoad.ChannelNumber = OperatingChannel;
+            AddLoad.flag = 1;
+            AddLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
+            outLoadToNeighbor(AddLoad);
+          }
+        }
+      }
+
+      for (int i=0; i<(int)CHMapToAction.size();i++){
+        int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
+        if (overlap ==1){
+          trafficLoad = trafficLoad+CH_occupancy_detected.at(i);
+        }
+      }
+
+      for (int i=0;i<(int)vectorOfConnectedStations.size();i++){
+        APBeacon beacon;
+        beacon.header.destinationID = vectorOfConnectedStations.at(i);
+        beacon.header.sourceID = apID;
+        beacon.header.X = X;
+        beacon.header.Y = Y;
+        beacon.header.Z = Z;
+        beacon.Tx_Power = txPower;
+        beacon.freq = frequency;
+        beacon.protocolType = IEEEprotocolType;
+        beacon.BW = channelBW;
+        outChannelChange(beacon);
+
+        Connection update;
+        update.header.sourceID = apID;
+        update.header.destinationID = vectorOfConnectedStations.at(i);
+        update.Ap_Load = trafficLoad;
+        outAssignAirTime(update);
+      }
+
+      ActionChange.push_back(actionSelected);
+      TimeStamp.push_back(SimTime());
+
+      trigger_Action.Set(SimTime()+ChSelectionTime);
     }break;
   }
 }

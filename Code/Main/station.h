@@ -49,7 +49,8 @@ public:
   std::vector<int> Times_ActionSelected;                            //Times arm has been selected.
   std::vector<int> Action_Selected;                                 //Vector to store the APs selected when eGreedy.
   std::vector<int> ActionChange;
-  std::vector<float> TimeStamp;
+  std::vector<double> TimeStamp;
+  std::vector<double> Throughput;
 
   std::vector< std::vector<double> > estimated_reward_Per_action;    //Matrix to store estimated reward per action;
   std::vector< std::vector<double> > estimated_reward_Per_action_Time;
@@ -110,7 +111,7 @@ void Station :: Setup(){
 
 void Station :: Start(){
   iter = 1;
-  flag = 1;
+  flag = 0;
   TimeSizeF = 0;
   TimeSizeS = 0;
 }
@@ -153,7 +154,7 @@ void Station :: inReceivedBeacon(APBeacon &b){
 void Station :: ProcessBeacons(trigger_t&){
 
   StationInfo info;
-  
+
   std::vector<double>RSSIvalueUL;
   std::vector<double>DLDataRates;
   std::vector<double>ULDataRates;
@@ -374,7 +375,9 @@ void Station :: SendTxTimeFinished(trigger_t&){
   finishTX = SimTime();
   TimeSizeF = (int)timeSim2.size();
   int size = TimeSizeF-TimeSizeS;
+  double throughput = GetData(FlowType, TimeSizeS, size, &Satisfaction, requestedBW);
 
+  Throughput.push_back(throughput);
   bits_Sent = bits_Sent + (GetData(FlowType, TimeSizeS, size, &Satisfaction, requestedBW)*(finishTX-startTX));
   totalBits = totalBits + (requestedBW*(finishTX-startTX));
   //timeActive = timeActive + (finishTX-startTX);
@@ -462,9 +465,10 @@ void Station :: APselectionBylearning(trigger_t&){
       case 2:{  /*Thompson Sampling strategy */
 
         if (flag == 0){
-          int i = rand()%num_arms;
-          servingAP = CandidateAPs.at(i);
-          Times_ActionSelected[i] = Times_ActionSelected[i] + 1;
+          estimated_reward_action[index] = ((estimated_reward_action[index] * Times_ActionSelected[index]) + (reward_action[index]))/ (Times_ActionSelected[index] + 2);
+          estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
+          estimated_reward_Per_action_Time[index].push_back(SimTime());
+          servingAP = CandidateAPs.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_AP, &Times_ActionSelected));
           flag++;
         }
         else{
