@@ -1,12 +1,6 @@
-#include <cmath>
-#include <algorithm>
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <fstream>
 
 
-double PropL(double clientX, double clientY, double clientZ, double ApX, double ApY, double ApZ, double f){
+double PropL(double x, double y, double z, double x1, double y1, double z1, double f){
 
   switch (propagation) {
 
@@ -15,11 +9,9 @@ double PropL(double clientX, double clientY, double clientZ, double ApX, double 
       int n_walls = 5;                                         //Wall frequency [m/wall]
       int n_floors = 2;                                        //Number of floors crossed (in X and Y axis)
       double dBP = 5;                                         //Distance in meters (m).
-      double expo;
-      double dBP_losses, propagationLosses;
-      double distance;                                          //Current distance from one client to the AP/relay.
+      double dBP_losses, PL, distance, expo;
 
-      distance = sqrt(pow(ApX-clientX, 2)+pow(ApY-clientY, 2)+pow(ApZ-clientZ, 2));
+      distance = sqrt(pow(x-x1, 2)+pow(y-y1, 2)+pow(z-z1, 2));
 
       if (distance >= dBP){
         dBP_losses = 35*log10(distance/dBP);
@@ -30,21 +22,20 @@ double PropL(double clientX, double clientY, double clientZ, double ApX, double 
 
       expo=((distance/n_floors)+2)/((distance/n_floors)+1)-0.46;
 
-      propagationLosses = 40.05 + 20*log10(f/2.4) + 20*log10(std::min(distance,dBP)) + dBP_losses + 18.3*pow((distance/n_floors),expo)+ 5*(distance/n_walls);
+      PL = 40.05 + 20*log10(f/2.4) + 20*log10(std::min(distance,dBP)) + dBP_losses + 18.3*pow((distance/n_floors),expo)+ 5*(distance/n_walls);
 
-      return propagationLosses;
+      return PL;
 
     }break;
 
     //ENTERPRISE SCENARIO -- It does not consider floors, z = 1;
     case 1:{
 
-      int n_walls = 4;                                         //Wall frequency [m/wall]
-      double dBP = 5;                                         //Distance in meters (m).
-      double dBP_losses, propagationLosses;
-      double distance;                                         //Current distance from one client to the AP/relay.
+      int n_walls = 4;                                          //Wall frequency [m/wall]
+      double dBP = 5;                                           //Distance in meters (m).
+      double dBP_losses, PL, distance;
 
-      distance = sqrt(pow(ApX-clientX, 2)+pow(ApY-clientY, 2)+pow(ApZ-clientZ, 2));
+      distance = sqrt(pow(x-x1, 2)+pow(y-y1, 2)+pow(z-z1, 2));
 
       if (distance >= dBP){
         dBP_losses = 35*log10(distance/dBP);
@@ -53,9 +44,9 @@ double PropL(double clientX, double clientY, double clientZ, double ApX, double 
         dBP_losses = 0;
       }
 
-      propagationLosses = 40.05 + 20*log10(f/2.4) + 20*log10(std::min(distance,dBP)) + dBP_losses + 7*n_walls;
+      PL = 40.05 + 20*log10(f/2.4) + 20*log10(std::min(distance,dBP)) + dBP_losses + 7*n_walls;
 
-      return propagationLosses;
+      return PL;
 
     }break;
 
@@ -65,5 +56,25 @@ double PropL(double clientX, double clientY, double clientZ, double ApX, double 
 
 
     }break;
+  }
+}
+
+double Dmax(double sensitivity, double TxPower, double f){
+
+  switch (propagation){
+    case 1:{
+        int n_walls = 4;                                         //Wall frequency [m/wall]
+        double dBP = 5;                                         //Distance in meters (m).
+
+        double ChW = GetChWFromFc(f);
+        double nCh = ChW/20;
+        double PtxLineal = pow(10,((TxPower-30)/10));
+        double Ptx_dBm = 10*log10(PtxLineal/nCh) + 30;
+
+        double PL = Ptx_dBm - sensitivity;
+        double distance = dBP*pow(10,((PL - 40.05 - 20*log10(f/2.4) - 20*log10(dBP) - 7*n_walls)/35));
+
+        return distance;
+    }
   }
 }

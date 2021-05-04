@@ -1,14 +1,18 @@
 
 #line 1 "neko.cc"
 #include <math.h>
-#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <cmath>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
-#include <time.h>
+#include <map>
 #include <vector>
+#include <utility>
 #include <string>
+#include <list>
 
 
 #line 1 "../COST/cost.h"
@@ -1248,51 +1252,41 @@ void CostSimEng::Run()
 
 
 
-#line 11 "neko.cc"
+#line 15 "neko.cc"
 
 
-#line 1 "../Main/macros.h"
-
-
-
+#line 1 "../Config/constants.h"
 
 
 
-const int runTimeSim = 86400;           
+
+
+
+const int runTime = 120;           	
 const int rnd = 1;                      
 const int lowBW = 2;                    
-const int medBW = 5;                    
+double medBW;                    
 const int highBW = 8;                   
 const int propagation = 1;              
-const int LearningWindowTime = 540;     
-const double ProbUserAgentEnabled = 1;  
+const int WinTime = 540;     			
+const double RSSIth = -75;				
+const int maxIntNum = 3;
+bool channel_report = false;				
+bool stats_report = true;					
 
 
 
+std::string policy;
 
-      const int frameLength = 12000;                    
 
-      const int Lsf = 16;                               
-      const int Lmac = 320;                             
-      const int Ltb = 18;                               
-      const int Lack = 112;                             
-      const int Lrts = 160;                             
-      const int Lcts = 112;                             
-      const int CW = 16;                                
 
-      const double Tempty = 9*pow(10,-6);               
-      const double Tsifs = 16*pow(10,-6);               
-      const double Tdifs = 34*pow(10,-6);               
-      const double TphyL = 20*pow(10,-6);               
-      const double TphyHE = 164*pow(10,-6);             
-      const double Tofdm_leg = 4*pow(10,-6);            
-      const double Tofdm = 16*pow(10,-6);               
-      const double legacyRate = 24;                     
 
-      const double Pe = 0.1;                            
 
 
 
+const std::vector<std::vector<double>> Channels{{1,6,11},
+																								{38,46,58},
+																								{55,71,15}};
 
 
 
@@ -1300,8 +1294,26 @@ const double ProbUserAgentEnabled = 1;
 
 
 
+const int Lpckt = 12000;                          
+const int Lsf = 16;                               
+const int Lmac = 320;                             
+const int Ltb = 18;                               
 
+const int Lack = 112;															
 
+const int Lrts = 160;                             
+const int Lcts = 112;                             
+const int CW = 15;                                
+const double Tempty = 9*pow(10,-6);               
+const double Tsifs = 16*pow(10,-6);               
+const double Tdifs = 34*pow(10,-6);               
+const double TphyL = 20*pow(10,-6);               
+const double TphyHE = 164*pow(10,-6);             
+const double Tofdm_leg = 4*pow(10,-6);            
+const double Tofdm = 16*pow(10,-6);               
+const double legacyRate = 24;                     
+const double Pe = 0.1;                            
+const int NF = 7;								  								
 
 
 
@@ -1310,339 +1322,408 @@ const double ProbUserAgentEnabled = 1;
 
 
 
+const double t_EndFlow = 1;            
+const double t_ActFlow = 3;            
 
 
 
 
 
 
+const int off_DCA = 50;              
+const int off_DAPS = 7200;             
 
+#line 16 "neko.cc"
 
 
+#line 1 "../Methods/frequency.h"
 
+std::string GetBand (double fc){
 
+	std::string band;
+	int fc_band = (int)fc;
 
-
-
-
-
-const int stationLearningFlag = 2;      
-const int APlearningFlag = 2;           
-
-
-
-
-const double flowDuration = 20;            
-const double flowActivation = 60;          
-
-
-
-const int SearchBestAP = 180;           
-const int ChSelectionTime = 180;        
-
-const int offsetAP = 7200;              
-const int offsetSTA = 7200;             
-
-#line 12 "neko.cc"
-
-
-#line 1 "../Methods/freq_and_modulation.h"
-#include <math.h>
-#include <algorithm>
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <fstream>
-
-double *GetConfiguration (int IEEEprotocol, int action){
-
-double *configuration = new double[3];
-
-  switch (IEEEprotocol) {
-    case 0:{
-
-      int actions [] = {0,1,2,3,4};
-      int size = sizeof(actions)/sizeof(int);
-      int Channel [] = {1,6,11,3,11};
-      double fc []  = {2.412,2.437,2.462,2.422,2.462};
-
-      if (action <= 2){
-        configuration [0] = 20;
-
-        for (int i=0; i<size; i++){
-          if (action == actions[i]){
-            configuration [1] = Channel[i];
-            configuration [2] = fc[i];
-          }
-        }
-      }
-      else{
-        configuration [0] = 40;
-
-        for (int i=0; i<size; i++){
-          if (action == actions[i]){
-            configuration [1] = Channel[i];
-            configuration [2] = fc[i];
-          }
-        }
-      }
-    }break;
-
-    case 1:{
-
-      
-
-
-
-
-      int actions [] = {0,1,2,3,4,5,6};
-      int size = sizeof(actions)/sizeof(int);
-      int Channel [] = {36,40,44,48,38,46,42};
-      double fc []  = {5.18,5.2,5.22,5.24,5.19,5.23,5.21};
-
-      if (action <= 3){ 
-        configuration [0] = 20;
-
-        for (int i=0; i<size; i++){
-          if (action == actions[i]){
-            configuration [1] = Channel[i];
-            configuration [2] = fc[i];
-          }
-        }
-      }
-      else if((4 == action) || (action == 5)){ 
-        configuration [0] = 40;
-
-        for (int i=0; i<size; i++){
-          if (action == actions[i]){
-            configuration [1] = Channel[i];
-            configuration [2] = fc[i];
-          }
-        }
-      }
-      else if (action == 6){ 
-        configuration [0] = 80;
-        for (int i=0; i<size; i++){
-          if (action == actions[i]){
-            configuration [1] = Channel[i];
-            configuration [2] = fc[i];
-          }
-        }
-      }
-    }break;
-
-    case 2:{ 
-
-      int actions [] = {0,1,2,3,4,5,6};
-      int size = sizeof(actions)/sizeof(int);
-      int Channel [] = {36,40,44,48,38,46,42};
-      double fc []  = {5.18,5.2,5.22,5.24,5.19,5.23,5.21};
-
-      if (action <= 3){ 
-        configuration [0] = 20;
-
-        for (int i=0; i<size; i++){
-          if (action == actions[i]){
-            configuration [1] = Channel[i];
-            configuration [2] = fc[i];
-          }
-        }
-      }
-      else if((4 == action) || (action == 5)){ 
-        configuration [0] = 40;
-
-        for (int i=0; i<size; i++){
-          if (action == actions[i]){
-            configuration [1] = Channel[i];
-            configuration [2] = fc[i];
-          }
-        }
-      }
-      else if (action == 6){ 
-        configuration [0] = 80;
-        for (int i=0; i<size; i++){
-          if (action == actions[i]){
-            configuration [1] = Channel[i];
-            configuration [2] = fc[i];
-          }
-        }
-      }
-    }break;
-  }
-  return configuration;
+	switch (fc_band){
+		case 2:{band = "2_4GHz";}break;
+		case 5:{band = "5GHz";}break;
+		case 6:{band = "6GHz";}break;
+	}
+	return band;
 }
 
-int SelectMCS (double Prx, int protocol){
+std::pair<double,int> GetFromChN(int ChN){
 
-  int MCS_selected;
+	double fc;
+	int ChW;
 
-  switch (protocol) {
-    case 0:{
-      if (Prx < -82) {MCS_selected = -1;} 
-      else if (Prx >= -82 && Prx < -79) {MCS_selected = 0;}
-      else if (Prx >= -79 && Prx < -77) {MCS_selected = 1;}
-      else if (Prx >= -77 && Prx < -74) {MCS_selected = 2;}
-      else if (Prx >= -74 && Prx < -70) {MCS_selected = 3;}
-      else if (Prx >= -70 && Prx < -66) {MCS_selected = 4;}
-      else if (Prx >= -66 && Prx < -65) {MCS_selected = 5;}
-      else if (Prx >= -65 && Prx < -64) {MCS_selected = 6;}
-      else if (Prx >= -64 && Prx < -59) {MCS_selected = 7;}
-      else if (Prx >= -59) {MCS_selected = 7;}
-    }break;
+	if (ChN == 1){fc = 2.412; ChW = 20;}
+	else if( ChN == 6){fc = 2.437; ChW = 20;}
+	else if( ChN == 11){fc = 2.462; ChW = 20;}
+	else if( ChN == 3){fc = 2.422; ChW = 40;}
+	else if( ChN == 36){fc = 5.18; ChW = 20;}
+	else if( ChN == 38){fc = 5.19; ChW = 40;}
+	else if( ChN == 46){fc = 5.23; ChW = 40;}
+	else if( ChN == 42){fc = 5.21; ChW = 80;}
+	else if( ChN == 58){fc = 5.29; ChW = 80;}
+	else if( ChN == 25){fc = 6.065; ChW = 20;}
+	else if( ChN == 51){fc = 6.195; ChW = 40;}
+	else if( ChN == 55){fc = 6.215; ChW = 80;}
+	else if( ChN == 71){fc = 6.295; ChW = 80;}
+	else if( ChN == 47){fc = 6.175; ChW = 160;}
+	else if( ChN == 15){fc = 6.015; ChW = 160;}
 
-    case 1:{
-      if (Prx < -82) {MCS_selected = -1;} 
-      else if (Prx >= -82 && Prx < -79) {MCS_selected = 0;}
-      else if (Prx >= -79 && Prx < -77) {MCS_selected = 1;}
-      else if (Prx >= -77 && Prx < -74) {MCS_selected = 2;}
-      else if (Prx >= -74 && Prx < -70) {MCS_selected = 3;}
-      else if (Prx >= -70 && Prx < -66) {MCS_selected = 4;}
-      else if (Prx >= -66 && Prx < -65) {MCS_selected = 5;}
-      else if (Prx >= -65 && Prx < -64) {MCS_selected = 6;}
-      else if (Prx >= -64 && Prx < -59) {MCS_selected = 7;}
-      else if (Prx >= -59 && Prx < -57) {MCS_selected = 8;}
-      else if (Prx >= -57) {MCS_selected = 9;}
-    }break;
-
-    case 2:{
-      if (Prx < -82) {MCS_selected = -1;} 
-      else if (Prx >= -82 && Prx < -79) {MCS_selected = 0;}
-      else if (Prx >= -79 && Prx < -77) {MCS_selected = 1;}
-      else if (Prx >= -77 && Prx < -74) {MCS_selected = 2;}
-      else if (Prx >= -74 && Prx < -70) {MCS_selected = 3;}
-      else if (Prx >= -70 && Prx < -66) {MCS_selected = 4;}
-      else if (Prx >= -66 && Prx < -65) {MCS_selected = 5;}
-      else if (Prx >= -65 && Prx < -64) {MCS_selected = 6;}
-      else if (Prx >= -64 && Prx < -59) {MCS_selected = 7;}
-      else if (Prx >= -59 && Prx < -57) {MCS_selected = 8;}
-      else if (Prx >= -57 && Prx < -54) {MCS_selected = 9;}
-      else if (Prx >= -54 && Prx < -52) {MCS_selected = 10;}
-      else if (Prx >= -52) {MCS_selected = 11;}
-    }break;
-  }
-
-  return MCS_selected;
+	return std::make_pair(fc,ChW);
 }
 
-double SetDataRate(double RSSI, int IEEEprotocol, int CH_Bandwidth){
+bool CheckNeighChOverlapp(double fc, double neighFc){
 
-  double data_rate;
-  int numDataSubcarriers;
+	bool overlap = false;
+	int fc_band = (int)fc;
 
-  switch (IEEEprotocol) {
-    case 0:{
-      switch (CH_Bandwidth) {
-        case 20:{
-          
-          numDataSubcarriers = 52;
-        }break;
+	switch (fc_band){
+		
+		case 2:{
+			if((fc == neighFc) || ((fc == 2.412) && (neighFc == 2.422)) || ((fc == 2.422) && (neighFc == 2.412))){
+				overlap = true;
+			}
+		}break;
 
-        case 40:{
-          
-          numDataSubcarriers = 108;
-        }break;
-      }
-
-      int MCS_index = SelectMCS(RSSI, IEEEprotocol);
-      int BitsSimbol_Modulation [] = {1,2,2,4,4,6,6,6};  
-      double codingR [] = {1/double(2),1/double(2),3/double(4),1/double(2),3/double(4),2/double(3),3/double(4),5/double(6)}; 
-      int Nss = 2;              
-
-      if (MCS_index == -1){
-        data_rate = 0;
-      }
-      else{
-        int modBits = BitsSimbol_Modulation [MCS_index];
-        double codingRate = codingR [MCS_index];
-        data_rate = (Nss * modBits * codingRate * numDataSubcarriers * 1/Tofdm) /1000000; 
-      }
-    }break;
-
-    case 1:{
-      switch (CH_Bandwidth) {
-        case 20:{
-          
-          numDataSubcarriers = 52;
-        }break;
-
-        case 40:{
-          
-          numDataSubcarriers = 108;
-        }break;
-
-        case 80:{
-          
-          numDataSubcarriers = 234;
-        }break;
-      }
-
-      int MCS_index = SelectMCS(RSSI, IEEEprotocol);
-      int BitsSimbol_Modulation [] = {1,2,2,4,4,6,6,6,8,8};  
-      double codingR [] = {1/double(2),1/double(2),3/double(4),1/double(2),3/double(4),2/double(3),3/double(4),5/double(6),3/double(4),5/double(6)}; 
-      int Nss = 2;              
-
-      if (MCS_index == -1){
-        data_rate = 0;
-      }
-      else{
-        int modBits = BitsSimbol_Modulation [MCS_index];
-        double codingRate = codingR [MCS_index];
-        data_rate = (Nss * modBits * codingRate * numDataSubcarriers * 1/Tofdm) /1000000; 
-      }
-
-    }break;
-
-    case 2:{
-      switch (CH_Bandwidth) {
-        case 20:{
-          
-          numDataSubcarriers = 234;
-        }break;
-
-        case 40:{
-          
-          numDataSubcarriers = 468;
-        }break;
-
-        case 80:{
-          
-          numDataSubcarriers = 980;
-        }break;
-      }
-
-      int MCS_index = SelectMCS(RSSI, IEEEprotocol);
-      int BitsSimbol_Modulation [] = {1,2,2,4,4,6,6,6,8,8,10,10};  
-      double codingR [] = {1/double(2),1/double(2),3/double(4),1/double(2),3/double(4),2/double(3),3/double(4),5/double(6),3/double(4),5/double(6),5/double(6),5/double(6)}; 
-      int Nss = 2;              
-
-      if (MCS_index == -1){
-        data_rate = 0;
-      }
-      else{
-        int modBits = BitsSimbol_Modulation [MCS_index];
-        double codingRate = codingR [MCS_index];
-        data_rate = (Nss * modBits * codingRate * numDataSubcarriers * 1/Tofdm) /1000000; 
-      }
-
-    }break;
-  }
-
-  return data_rate;
+		
+		case 5:{
+			if ((fc == neighFc) || ((fc == 5.18) && (neighFc == 5.19)) || ((fc == 5.19) && (neighFc == 5.18)) || ((fc == 5.18) && (neighFc == 5.21))|| ((fc == 5.21) && (neighFc == 5.18)) ||
+																									((fc == 5.19) && (neighFc == 5.21)) || ((fc == 5.21) && (neighFc == 5.19)) || ((fc == 5.23) && (neighFc == 5.21)) || ((fc == 5.21) && (neighFc == 5.23))){
+				overlap = true;
+			}
+		}break;
+		
+		case 6:{
+			if ((fc == neighFc) || ((fc == 6.195) && (neighFc == 6.175)) || ((fc == 6.175) && (neighFc == 6.195)) || ((fc == 6.195) && (neighFc == 6.215)) ||
+																							((fc == 6.215) && (neighFc == 6.195)) || ((fc == 6.215) && (neighFc == 6.175)) || ((fc == 6.175) && (neighFc == 6.215))){
+				overlap = true;
+			}
+		}break;
+	}
+	return overlap;
 }
 
-#line 13 "neko.cc"
+bool CheckChOverlapp(int ch1, int ch2){
+
+	std::pair<double, int> p = GetFromChN(ch1);
+	int band = (int)p.first;
+	bool overlap = false;
+
+	switch (band){
+
+		case 2:{
+			if((ch1 == ch2) || ((ch1 == 1) && (ch2 == 3)) || ((ch1 == 3) && (ch2 == 1))){
+				overlap = true;
+			}
+		}break;
+
+		case 5:{
+			if((ch1 == ch2) || ((ch1 == 36) && (ch2 == 38)) || ((ch1 == 38) && (ch2 == 36)) || ((ch1 == 36) && (ch2 == 42)) || ((ch1 == 42) && (ch2 == 36))
+																															|| ((ch1 == 38) && (ch2 == 42)) || ((ch1 == 42) && (ch2 == 38)) || ((ch1 == 46) && (ch2 == 42)) || ((ch1 == 42) && (ch2 == 46))){
+				overlap = true;
+			}
+		}break;
+
+		case 6:{
+			if((ch1 == ch2) || ((ch1 == 51) && (ch2 == 55)) || ((ch1 == 55) && (ch2 == 51)) || ((ch1 == 51) && (ch2 == 47))
+																											|| ((ch1 == 47) && (ch2 == 51)) || ((ch1 == 55) && (ch2 == 47)) || ((ch1 == 47) && (ch2 == 55))){
+				overlap = true;
+			}
+		}break;
+	}
+
+	return overlap;
+}
+
+int GetChWFromFc (double fc){
+
+	int ChW;
+	int fc_band = (int)fc;
+
+	switch (fc_band){
+		case 2:{
+			if (fc == 2.422){ChW = 40;}
+			else{ChW = 20;}
+		}break;
+
+		case 5:{
+			if (fc == 5.18){ChW = 20;}
+			else if ((fc == 5.19) || (fc == 5.23)){ChW = 40;}
+			else{ChW = 80;}
+		}break;
+
+		case 6:{
+			if (fc == 6.065){ChW = 20;}
+			else if (fc == 6.195){ChW = 40;}
+			else if ((fc == 6.215) || (fc == 6.295)){ChW = 80;}
+			else{ChW = 160;}
+		}break;
+	}
+	return ChW;
+}
+
+#line 17 "neko.cc"
+
+
+#line 1 "../Methods/modulation.h"
+
+int GetMCS (double SNR, int protocol, int ChW){
+
+	int MCS;
+	switch (protocol) {
+
+		
+      	case 1:{
+      		switch (ChW){
+      			case 20:{
+      				if (SNR < 2) {MCS = -1;} 
+					else if (SNR >= 2 && SNR < 5) {MCS = 0;}
+					else if (SNR >= 5 && SNR < 9) {MCS = 1;}
+					else if (SNR >= 9 && SNR < 11) {MCS = 2;}
+					else if (SNR >= 11 && SNR < 15) {MCS = 3;}
+					else if (SNR >= 15 && SNR < 18) {MCS = 4;}
+					else if (SNR >= 18 && SNR < 20) {MCS = 5;}
+					else if (SNR >= 20 && SNR < 25) {MCS = 6;}
+					else if (SNR >= 25 && SNR < 29) {MCS = 7;}
+					else if (SNR >= 29 && SNR < 31) {MCS = 8;}
+					else if (SNR >= 31 && SNR < 34) {MCS = 9;}
+					else if (SNR >= 34 && SNR < 37) {MCS = 10;}
+					else if (SNR >= 37) {MCS = 11;}
+      			}break;
+      			case 40:{
+      				if (SNR < 5) {MCS = -1;} 
+					else if (SNR >= 5 && SNR < 8) {MCS = 0;}
+					else if (SNR >= 8 && SNR < 12) {MCS = 1;}
+					else if (SNR >= 12 && SNR < 14) {MCS = 2;}
+					else if (SNR >= 14 && SNR < 18) {MCS = 3;}
+					else if (SNR >= 18 && SNR < 21) {MCS = 4;}
+					else if (SNR >= 21 && SNR < 23) {MCS = 5;}
+					else if (SNR >= 23 && SNR < 28) {MCS = 6;}
+					else if (SNR >= 28 && SNR < 32) {MCS = 7;}
+					else if (SNR >= 32 && SNR < 34) {MCS = 8;}
+					else if (SNR >= 34 && SNR < 37) {MCS = 9;}
+					else if (SNR >= 37 && SNR < 40) {MCS = 10;}
+					else if (SNR >= 40) {MCS = 11;}
+      			}break;
+      			case 80:{
+      				if (SNR < 8) {MCS = -1;} 
+					else if (SNR >= 8 && SNR < 11) {MCS = 0;}
+					else if (SNR >= 11 && SNR < 15) {MCS = 1;}
+					else if (SNR >= 15 && SNR < 17) {MCS = 2;}
+					else if (SNR >= 17 && SNR < 21) {MCS = 3;}
+					else if (SNR >= 21 && SNR < 24) {MCS = 4;}
+					else if (SNR >= 24 && SNR < 26) {MCS = 5;}
+					else if (SNR >= 26 && SNR < 31) {MCS = 6;}
+					else if (SNR >= 31 && SNR < 35) {MCS = 7;}
+					else if (SNR >= 35 && SNR < 37) {MCS = 8;}
+					else if (SNR >= 37 && SNR < 40) {MCS = 9;}
+					else if (SNR >= 40 && SNR < 42) {MCS = 10;}
+					else if (SNR >= 42) {MCS = 11;}
+      			}break;
+      		}
+      	}break;
+
+      	
+      	case 2:{
+      		switch (ChW){
+      			case 20:{
+      				if (SNR < 2) {MCS = -1;} 
+					else if (SNR >= 2 && SNR < 5) {MCS = 0;}
+					else if (SNR >= 5 && SNR < 9) {MCS = 1;}
+					else if (SNR >= 9 && SNR < 11) {MCS = 2;}
+					else if (SNR >= 11 && SNR < 15) {MCS = 3;}
+					else if (SNR >= 15 && SNR < 18) {MCS = 4;}
+					else if (SNR >= 18 && SNR < 20) {MCS = 5;}
+					else if (SNR >= 20 && SNR < 25) {MCS = 6;}
+					else if (SNR >= 25 && SNR < 29) {MCS = 7;}
+					else if (SNR >= 29 && SNR < 31) {MCS = 8;}
+					else if (SNR >= 31 && SNR < 34) {MCS = 9;}
+					else if (SNR >= 34 && SNR < 37) {MCS = 10;}
+					else if (SNR >= 37) {MCS = 11;}
+      			}break;
+      			case 40:{
+      				if (SNR < 5) {MCS = -1;} 
+					else if (SNR >= 5 && SNR < 8) {MCS = 0;}
+					else if (SNR >= 8 && SNR < 12) {MCS = 1;}
+					else if (SNR >= 12 && SNR < 14) {MCS = 2;}
+					else if (SNR >= 14 && SNR < 18) {MCS = 3;}
+					else if (SNR >= 18 && SNR < 21) {MCS = 4;}
+					else if (SNR >= 21 && SNR < 23) {MCS = 5;}
+					else if (SNR >= 23 && SNR < 28) {MCS = 6;}
+					else if (SNR >= 28 && SNR < 32) {MCS = 7;}
+					else if (SNR >= 32 && SNR < 34) {MCS = 8;}
+					else if (SNR >= 34 && SNR < 37) {MCS = 9;}
+					else if (SNR >= 37 && SNR < 40) {MCS = 10;}
+					else if (SNR >= 40) {MCS = 11;}
+      			}break;
+      			case 80:{
+      				if (SNR < 8) {MCS = -1;} 
+					else if (SNR >= 8 && SNR < 11) {MCS = 0;}
+					else if (SNR >= 11 && SNR < 15) {MCS = 1;}
+					else if (SNR >= 15 && SNR < 17) {MCS = 2;}
+					else if (SNR >= 17 && SNR < 21) {MCS = 3;}
+					else if (SNR >= 21 && SNR < 24) {MCS = 4;}
+					else if (SNR >= 24 && SNR < 26) {MCS = 5;}
+					else if (SNR >= 26 && SNR < 31) {MCS = 6;}
+					else if (SNR >= 31 && SNR < 35) {MCS = 7;}
+					else if (SNR >= 35 && SNR < 37) {MCS = 8;}
+					else if (SNR >= 37 && SNR < 40) {MCS = 9;}
+					else if (SNR >= 40 && SNR < 42) {MCS = 10;}
+					else if (SNR >= 42) {MCS = 11;}
+      			}break;
+      			case 160:{
+      				if (SNR < 11) {MCS = -1;} 
+					else if (SNR >= 11 && SNR < 14) {MCS = 0;}
+					else if (SNR >= 14 && SNR < 18) {MCS = 1;}
+					else if (SNR >= 18 && SNR < 20) {MCS = 2;}
+					else if (SNR >= 20 && SNR < 24) {MCS = 3;}
+					else if (SNR >= 24 && SNR < 27) {MCS = 4;}
+					else if (SNR >= 27 && SNR < 29) {MCS = 5;}
+					else if (SNR >= 29 && SNR < 34) {MCS = 6;}
+					else if (SNR >= 34 && SNR < 38) {MCS = 7;}
+					else if (SNR >= 38 && SNR < 40) {MCS = 8;}
+					else if (SNR >= 40 && SNR < 42) {MCS = 9;}
+					else if (SNR >= 42 && SNR < 44) {MCS = 10;}
+					else if (SNR >= 44) {MCS = 11;}
+      			}break;
+      		}
+      	}break;
+    }
+    return MCS;
+}
+
+int GetBitsPerSimbol(int index){
+
+	int BitsSimbol[] = {1,2,2,4,4,6,6,6,8,8,10,10};  
+	return BitsSimbol[index];
+}
+
+double GetCodingRate(int index){
+
+	double CR [] = {1/double(2),1/double(2),3/double(4),1/double(2),3/double(4),2/double(3),3/double(4),5/double(6),3/double(4),5/double(6),3/double(4),5/double(6)}; 
+	return CR[index];
+}
+
+int GetSubcarriers(double fc, int width){
+
+	int subcarriers;
+	int band = (int)fc;
+
+	switch (band){
+		case 2:{
+			switch (width){
+				case 20:{subcarriers = 234;}break;
+				case 40:{subcarriers = 468;}break;
+			}
+		}break;
+
+		case 5:{
+			switch (width){
+				case 20:{subcarriers = 234;}break;
+				case 40:{subcarriers = 468;}break;
+				case 80:{subcarriers = 980;}break;
+			}
+		}break;
+
+		case 6:{
+			switch (width){
+				case 20:{subcarriers = 234;}break;
+				case 40:{subcarriers = 468;}break;
+				case 80:{subcarriers = 980;}break;
+				case 160:{subcarriers = 1960;}break;
+			}
+		}break;
+	}
+	return subcarriers;
+}
+
+#line 18 "neko.cc"
+
+
+#line 1 "../Classes/structs.h"
+
+
+
+
+
+struct Position{
+
+	double x;										
+	double y;										
+	double z;										
+};
+
+struct Capabilities{
+
+	int IEEEProtocol;						
+	bool Multilink;							
+	bool Mlearning;							
+};
+
+struct Configuration{
+
+	int nSS;										
+	double TxPower;							
+	double CCA;									
+};
+
+
+
+
+
+
+struct WifiSTA{
+
+	int id;												
+	Position coord;								
+	std::string traffic_type;			
+	std::vector<double> fc;				
+	std::vector<double> RSSI;			
+	std::vector<double> SNR;			
+	std::vector<double> TxRate;		
+};
+
+struct WifiAP{
+
+	int id;												
+	Position coord;								
+	std::vector<double> fc;				
+	std::vector<double> ChOcc;		
+};
+
+
+
+
+
+
+struct APStatistics{
+
+	std::vector<std::vector<int>> ChSelection;			
+	std::vector<std::vector<double>> ChReward;			
+	std::vector<std::vector<double>> ChOcc;					
+	std::vector<double> SimT;												
+	std::vector<double> AvgDRPerFlow;
+};
+
+struct STAStatistics{
+
+	std::vector<int> APSelection;										
+	std::vector<std::vector<double>> SatEvo;				
+	std::vector<std::vector<double>> SimT;					
+	std::vector<double> AvgSatPerFlow;
+	std::vector<double> AvgThPerFlow;
+};
+
+#line 19 "neko.cc"
 
 
 #line 1 "../Methods/pathloss.h"
-#include <cmath>
-#include <algorithm>
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <fstream>
 
 
-double PropL(double clientX, double clientY, double clientZ, double ApX, double ApY, double ApZ, double f){
+double PropL(double x, double y, double z, double x1, double y1, double z1, double f){
 
   switch (propagation) {
 
@@ -1651,11 +1732,9 @@ double PropL(double clientX, double clientY, double clientZ, double ApX, double 
       int n_walls = 5;                                         
       int n_floors = 2;                                        
       double dBP = 5;                                         
-      double expo;
-      double dBP_losses, propagationLosses;
-      double distance;                                          
+      double dBP_losses, PL, distance, expo;
 
-      distance = sqrt(pow(ApX-clientX, 2)+pow(ApY-clientY, 2)+pow(ApZ-clientZ, 2));
+      distance = sqrt(pow(x-x1, 2)+pow(y-y1, 2)+pow(z-z1, 2));
 
       if (distance >= dBP){
         dBP_losses = 35*log10(distance/dBP);
@@ -1666,21 +1745,20 @@ double PropL(double clientX, double clientY, double clientZ, double ApX, double 
 
       expo=((distance/n_floors)+2)/((distance/n_floors)+1)-0.46;
 
-      propagationLosses = 40.05 + 20*log10(f/2.4) + 20*log10(std::min(distance,dBP)) + dBP_losses + 18.3*pow((distance/n_floors),expo)+ 5*(distance/n_walls);
+      PL = 40.05 + 20*log10(f/2.4) + 20*log10(std::min(distance,dBP)) + dBP_losses + 18.3*pow((distance/n_floors),expo)+ 5*(distance/n_walls);
 
-      return propagationLosses;
+      return PL;
 
     }break;
 
     
     case 1:{
 
-      int n_walls = 4;                                         
-      double dBP = 5;                                         
-      double dBP_losses, propagationLosses;
-      double distance;                                         
+      int n_walls = 4;                                          
+      double dBP = 5;                                           
+      double dBP_losses, PL, distance;
 
-      distance = sqrt(pow(ApX-clientX, 2)+pow(ApY-clientY, 2)+pow(ApZ-clientZ, 2));
+      distance = sqrt(pow(x-x1, 2)+pow(y-y1, 2)+pow(z-z1, 2));
 
       if (distance >= dBP){
         dBP_losses = 35*log10(distance/dBP);
@@ -1689,9 +1767,9 @@ double PropL(double clientX, double clientY, double clientZ, double ApX, double 
         dBP_losses = 0;
       }
 
-      propagationLosses = 40.05 + 20*log10(f/2.4) + 20*log10(std::min(distance,dBP)) + dBP_losses + 7*n_walls;
+      PL = 40.05 + 20*log10(f/2.4) + 20*log10(std::min(distance,dBP)) + dBP_losses + 7*n_walls;
 
-      return propagationLosses;
+      return PL;
 
     }break;
 
@@ -1704,385 +1782,136 @@ double PropL(double clientX, double clientY, double clientZ, double ApX, double 
   }
 }
 
-#line 14 "neko.cc"
+double Dmax(double sensitivity, double TxPower, double f){
 
-
-#line 1 "../Methods/helpers.h"
-
-double GetData (int flow, int initVal, int size, std::vector<double>* s, double Bw){
-  double bits;
-  switch (flow) {
-    case 0:{
-      double sat, avg_sat;
-      int count = 0;
-      sat = 0;
-      avg_sat = 0;
-
-      for (int i=0; i<size; i++){
-        sat = sat + s->at(initVal);
-        count++;
-        initVal++;
-      }
-
-      avg_sat = sat/count;
-      bits = Bw*avg_sat;
-
-      
-      break;
-    }
+  switch (propagation){
     case 1:{
-      break;
+        int n_walls = 4;                                         
+        double dBP = 5;                                         
+
+        double ChW = GetChWFromFc(f);
+        double nCh = ChW/20;
+        double PtxLineal = pow(10,((TxPower-30)/10));
+        double Ptx_dBm = 10*log10(PtxLineal/nCh) + 30;
+
+        double PL = Ptx_dBm - sensitivity;
+        double distance = dBP*pow(10,((PL - 40.05 - 20*log10(f/2.4) - 20*log10(dBP) - 7*n_walls)/35));
+
+        return distance;
     }
   }
-  return bits;
 }
 
-int SearchAction (int action, int numOfarms, std::vector<int>* setOfactions){
+#line 20 "neko.cc"
 
-  int index, value;
 
-  for (int i=0; i<numOfarms; i++){
-    value = setOfactions->at(i);
-    if (value == action){
-      index = i;
-    }
-  }
-  return index;
+#line 1 "../Methods/general.h"
+
+double CalculateTxTime(double L, double TxRate){
+
+	double TimeMPDU, Tack, Trts, Tcts, LDBPS_DL, AirTime;
+
+  LDBPS_DL = (TxRate*pow(10,6))*Tofdm;
+
+	TimeMPDU = TphyHE + std::ceil(((Lsf+Lmac+Lpckt+Ltb)/(LDBPS_DL)))*Tofdm;
+	Tack = TphyL + std::ceil(((Lsf+Lack+Ltb)/(legacyRate)))*Tofdm_leg;
+	Trts = TphyL + std::ceil(((Lsf+Lrts+Ltb)/(legacyRate)))*Tofdm_leg;
+	Tcts = TphyL + std::ceil(((Lsf+Lcts+Ltb)/(legacyRate)))*Tofdm_leg;
+
+	AirTime = (std::ceil((L*pow(10,6)/Lpckt))*(1/(1-Pe)))*(((CW/2)*Tempty)+(Trts+Tsifs+Tcts+Tsifs+TimeMPDU+Tsifs+Tack+Tdifs+Tempty));
+
+	return AirTime;
 }
 
-double GetReward (int currentAction, std::vector<double>* s, std::vector<int>* v, std::vector<double>* tS, double t){
+double GetFromTxTime(double at, double TxRate){
 
-  int times, v_value, size;
-  double r, avgReward, lowerBound, upperBound, s_value;
+	double TimeMPDU, Tack, Trts, Tcts, LDBPS_DL, load;
 
-  size = tS->size();
-  r = 0;
-  times = 0;
+  LDBPS_DL = (TxRate*pow(10,6))*Tofdm;
 
-  if (t-LearningWindowTime < 0){
-    lowerBound = 0;
-    upperBound = t;
-  }
-  else{
-    lowerBound = t-LearningWindowTime;
-    upperBound = t;
-  }
+	TimeMPDU = TphyHE + std::ceil(((Lsf+Lmac+Lpckt+Ltb)/(LDBPS_DL)))*Tofdm;
+	Tack = TphyL + std::ceil(((Lsf+Lack+Ltb)/(legacyRate)))*Tofdm_leg;
+	Trts = TphyL + std::ceil(((Lsf+Lrts+Ltb)/(legacyRate)))*Tofdm_leg;
+	Tcts = TphyL + std::ceil(((Lsf+Lcts+Ltb)/(legacyRate)))*Tofdm_leg;
+
+	load = (at*Lpckt)/((1/(1-Pe))*(((CW/2)*Tempty)+(Trts+Tsifs+Tcts+Tsifs+TimeMPDU+Tsifs+Tack+Tdifs+Tempty))*pow(10,6));
+	return load;
+}
+
+double CalculateSNR(double RSSI, double ChW){
+
+	double NoiseFloor = -174 + NF  + 10*log10(ChW*1E6);
+	double SNR = RSSI - NoiseFloor;
+
+	return SNR;
+}
+
+double CalculateRSSI(double Ptx, double fc, double x, double y, double z, double x1, double y1, double z1){
+
+	
+
+
+
+	double ChW = GetChWFromFc(fc);
+	double nCh = ChW/20;
+	double PtxLineal = pow(10,((Ptx-30)/10));
+	double Ptx_dBm = 10*log10(PtxLineal/nCh) + 30;
+
+	double RSSI = Ptx_dBm - PropL(x, y, z, x1, y1, z1, fc);
+
+	return RSSI;
+}
+
+double CalculateDataRate(double SNR, double fc, double ChW, Capabilities &cap, Configuration &config){
+
+	int MCS_index = GetMCS(SNR, cap.IEEEProtocol, ChW);
+	double rate;
+	if (MCS_index >= 0){
+
+		int BitsPerSimbol = GetBitsPerSimbol(MCS_index);
+		int Subcarriers = GetSubcarriers(fc, ChW);
+		double CodingR = GetCodingRate(MCS_index);
+
+		rate = (config.nSS * BitsPerSimbol * CodingR * Subcarriers * 1/Tofdm) /1000000; 
+	}
+	else{
+		rate = 0;
+		
+	}
+
+	return rate;
+}
+
+double GetActReward (int action, std::vector<int> *action_selection, std::vector<double> *received_reward, std::vector<double> *t_action, double simt){
+
+  int size = t_action->size();
+  int times = 0;
+
+  double lowerBound = std::max(0.0,simt-WinTime);
+  double upperBound = simt;
+	double sumReward = 0;
+	double avgReward = 0;
 
   for (int i=0; i<size; i++){
-    if ((lowerBound <= tS->at(i)) && (tS->at(i) < upperBound)){
-      v_value = v->at(i);
-      if (v_value == currentAction){
-        s_value = s->at(i);
-        r = r + s_value;
+    if ((lowerBound <= t_action->at(i)) && (t_action->at(i) < upperBound)){
+      if (action_selection->at(i) == action){
+        sumReward += received_reward->at(i);
         times++;
       }
     }
   }
 
-  if (r == 0){
-    avgReward = 0;
-  }
-  else{
-      avgReward = r/times;
-  }
+  if (sumReward != 0)
+      avgReward = sumReward/times;
   
   return avgReward;
 }
 
-double GetOccupancy (int currentAction, std::vector<double>* o, std::vector<int>* v, std::vector<double>* tS, double t){
-
-  int times, v_value, size;
-  double r, avgOccupancy, lowerBound, upperBound, o_value;
-
-  size = tS->size();
-  r = 0;
-  times = 0;
-
-  if (t-LearningWindowTime < 0){
-    lowerBound = 0;
-    upperBound = t;
-  }
-  else{
-    lowerBound = t-LearningWindowTime;
-    upperBound = t;
-  }
-
-  for (int i=0; i<size; i++){
-    if ((lowerBound <= tS->at(i)) && (tS->at(i) < upperBound)){
-      v_value = v->at(i);
-      if (v_value == currentAction){
-        o_value = o->at(i);
-        r = r + o_value;
-        times++;
-      }
-    }
-  }
-
-  if (r == 0){
-    avgOccupancy = 0;
-  }
-  else{
-      avgOccupancy = r/times;
-  }
-  
-  return avgOccupancy;
-}
-
-int ChannelOverlappingDetector (int protocol, int Ch_1, int Ch_2){
-
-  int Ch_overlapped;
-
-  switch (protocol) {
-    case 0:{
-      
-    }break;
-
-    case 1:{
-
-      switch (Ch_1) {
-        case 36:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 38)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        case 40:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 38)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        case 44:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 46)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        case 48:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 46)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        case 38:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 36)||(Ch_2 == 40)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        case 46:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 44)||(Ch_2 == 48)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        case 42:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 36)||(Ch_2 == 38)||(Ch_2 == 40)||(Ch_2 == 44)||(Ch_2 == 46)||(Ch_2 == 48)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-      
-
-
-
-
-
-
-
-      }
-    }break;
-
-    case 2:{
-
-      switch (Ch_1) {
-        case 36:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 38)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        case 40:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 38)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        case 44:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 46)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        case 48:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 46)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        case 38:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 36)||(Ch_2 == 40)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        case 46:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 44)||(Ch_2 == 48)||(Ch_2 == 42)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        case 42:{
-          if ((Ch_1 == Ch_2)||(Ch_2 == 36)||(Ch_2 == 38)||(Ch_2 == 40)||(Ch_2 == 44)||(Ch_2 == 46)||(Ch_2 == 48)){
-            Ch_overlapped = 1;
-          }
-          else{
-            Ch_overlapped = 0;
-          }
-        }break;
-      
-
-
-
-
-
-
-
-      }
-    }break;
-
-  }
-  return Ch_overlapped;
-}
-
-#line 15 "neko.cc"
+#line 21 "neko.cc"
 
 
 #line 1 "../Learning/strategies.h"
-#include <math.h>
-#include <random>
+
 
 
 
@@ -2155,7 +1984,7 @@ double gaussrand(double mean, double std){
 }
 
 
-int ThompsonSampling (int num_actions, std::vector<double>* estimated_reward, std::vector<double>* occupancy, std::vector<int>* times_arm_selected) {
+int ThompsonSampling (int num_actions, std::vector<double> *estimated_reward, std::vector<double> *times_arm_selected) {
 
 	int action_ix = 0;
   double theta[num_actions] = {0};
@@ -2177,77 +2006,1148 @@ int ThompsonSampling (int num_actions, std::vector<double>* estimated_reward, st
 		}
 	}
 
-	times_arm_selected->at(action_ix) = times_arm_selected->at(action_ix) + 1;
 	return action_ix;
 }
 
-#line 16 "neko.cc"
+#line 22 "neko.cc"
 
 
-#line 1 "../Structures/notifications.h"
+#line 1 "../Classes/flow.cc"
 
 
-struct Header{
 
-  int sourceID;
-  int destinationID;
-  double X,Y,Z;
+
+#line 1 "../Classes/flow.h"
+
+
+
+
+class Flow{
+
+private:
+
+	std::string _type;															
+	int _sender;																		
+	int _destination;																
+	double _timestamp;
+	double _length;																	
+	std::vector<double> _TxTime;										
+	std::vector<double> _Fc;												
+	std::vector<std::vector<double>> _Sat;
+
+
+public:
+	Flow();
+	~Flow();
+
+	
+	void setType(std::string);
+	void setSender(int);
+	void setDestination(int);
+	void setTimeStamp(double);
+	void setTxTime(double);
+	void setLength(double);
+	void setFc(double);
+	void setSat(std::vector<double> &);
+
+	
+	std::string getType();
+	int getSender();
+	int getDestination();
+	double getTimeStamp();
+	double getLength();
+	std::vector<double> getTxTime();
+	std::vector<double> getFc();
+
+	
+	void UpdateFc(std::vector<double> &, std::vector<double> &);
+	void UpdateTxTime(std::vector<double> &);
+	double getDratio();
+	double getSatisfaction();
 };
 
-struct APBeacon{
+#line 4 "../Classes/flow.cc"
 
-  Header header;
 
-  double Tx_Power;
-  double freq;
-  double Load;
-  int Channel;
-  int protocolType;
-  int BW;
+
+Flow::Flow(){
+
+}
+
+Flow::~Flow(){
+
+}
+
+void Flow::setType(std::string type){
+
+	_type = type;
+}
+
+void Flow::setSender(int sender){
+
+	_sender = sender;
+}
+
+void Flow::setDestination(int destination){
+
+	_destination = destination;
+}
+
+void Flow::setTimeStamp(double timestamp){
+
+	_timestamp = timestamp;
+}
+
+void Flow::setFc(double fc){
+
+	_Fc.push_back(fc);
+}
+
+void Flow::setTxTime(double t){
+
+	_TxTime.push_back(t);
+}
+
+void Flow::setLength(double dlength){
+
+	_length = dlength;
+}
+
+void Flow::setSat(std::vector<double> &s){
+
+	if ((int)_Sat.size() == 0){
+		for (int i=0; i<(int)s.size(); i++){
+			std::vector<double> inter;
+			_Sat.push_back(inter);
+		}
+	}
+	for (int i=0; i<(int)s.size(); i++){
+		_Sat[i].push_back(s.at(i));
+	}
+}
+
+std::string Flow::getType(){
+
+	return _type;
+}
+
+int Flow::getSender(){
+
+	return _sender;
+}
+
+int Flow::getDestination(){
+
+	return _destination;
+}
+
+std::vector<double> Flow::getTxTime(){
+
+	return _TxTime;
+}
+
+std::vector<double> Flow::getFc(){
+
+	return _Fc;
+}
+
+double Flow::getTimeStamp(){
+
+	return _timestamp;
+}
+
+double Flow::getLength(){
+
+	return _length;
+}
+
+
+
+void Flow::UpdateFc(std::vector<double> &old_fc, std::vector<double> &new_fc){
+	
+	for (int i=0; i<(int)_Fc.size(); i++){
+		for (int j=0; j<(int)old_fc.size(); j++){
+			if (old_fc.at(j) == _Fc.at(i)){
+				_Fc.at(i) = new_fc.at(j);
+				break;
+			}
+		}
+	}
+}
+
+
+
+void Flow::UpdateTxTime(std::vector<double> &new_times){
+	_TxTime.clear();
+	for (int i=0; i<(int)new_times.size(); i++){
+		_TxTime.push_back(new_times.at(i));
+	}
+}
+
+
+
+double Flow::getDratio(){
+
+	int num_interfaces = 0, counter = 0;
+	double avg_flow = 0, sat_interface = 0, dropRatio = 0;
+	for (int i=0; i<(int)_Sat.size(); i++){
+		for (int j=0; j<(int)_Sat[i].size(); j++){
+			if (_Sat[i].at(j) != -1){
+				sat_interface += _Sat[i].at(j);   
+				counter++;											  
+			}
+		}
+
+		if (sat_interface != 0){
+			avg_flow += sat_interface/counter;						
+			num_interfaces++;															
+		}
+		sat_interface = 0, counter=0;                               
+	}
+
+	dropRatio = 1 - ((_length*(avg_flow/num_interfaces))/_length);				
+	return dropRatio;
+}
+
+
+double Flow::getSatisfaction(){
+
+  int num_interfaces = 0, counter = 0;
+	double avg_flow = 0, sat_interface = 0, avg_satisfaction = 0;
+	for (int i=0; i<(int)_Sat.size(); i++){
+		for (int j=0; j<(int)_Sat[i].size(); j++){
+			if (_Sat[i].at(j) != -1){
+				sat_interface += _Sat[i].at(j);   
+				counter++;											  
+			}
+		}
+
+		if (sat_interface != 0){
+			avg_flow += sat_interface/counter;						
+			num_interfaces++;															
+		}
+		sat_interface = 0, counter=0;                               
+	}
+  avg_satisfaction = avg_flow/num_interfaces;				
+	return avg_satisfaction;
+}
+
+#line 23 "neko.cc"
+
+
+#line 1 "../Classes/notification.cc"
+
+
+#line 1 "../Classes/notification.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class Notification{
+
+private:
+	std::string _type;												
+	std::string _flag;												
+
+	int _sender;															
+	int _destination;													
+
+	Capabilities _capabilities;								
+	Position _coordinates;										
+
+	std::vector<double> _linkfc;							
+	std::vector<double> _linkQ;								
+
+	std::vector<double> _ChOcc;								
+	std::vector<double> _Sat;									
+
+
+public:
+	Notification(std::string t, int s, int d):_type(t), _sender(s), _destination(d){};
+
+	
+	void setPosition(Position &p);
+	void setCapabilities(Capabilities &cap);
+	void setFlag(std::string);
+	void setFc(double);
+	void setFc(std::vector<double> &v);
+	void setLinkQuality(std::vector<double> &v);
+	void setChOcc(std::vector<double> &v);
+	void setSat(std::vector<double> &v);
+
+	
+	std::string getType();
+	std::string getFlag();
+	int getSender();
+	int getDestination();
+	Position getPosition();
+	Capabilities getCapabilities();
+	std::vector<double> getFc();
+	std::vector<double> getLinkQuality();
+	std::vector<double> getSat();
+	std::vector<double> getChOcc();
+};
+
+
+
+
+class AppCTRL{
+
+private:
+
+	std::string _type;
+
+	int _sender;
+	int _destination;
+
+	std::string _tprofile;
+
+public:
+
+	AppCTRL(std::string t, int s, int d): _type(t), _sender(s), _destination(d){}
+
+	
+	void setTProfile(std::string);
+
+	
+	std::string getType();
+	int getSender();
+	int getDestination();
+	std::string getTProfile();
+};
+
+#line 2 "../Classes/notification.cc"
+
+
+
+void Notification::setPosition(Position &p){
+
+	_coordinates.x = p.x;
+	_coordinates.y = p.y;
+	_coordinates.z = p.z;
+}
+
+void Notification::setCapabilities(Capabilities &c){
+
+	_capabilities.IEEEProtocol = c.IEEEProtocol;
+	_capabilities.Multilink = c.Multilink;
+	_capabilities.Mlearning = c.Mlearning;
+}
+
+void Notification::setLinkQuality(std::vector<double> &v){
+
+	for (int i=0; i<(int)v.size(); i++){
+		_linkQ.push_back(v.at(i));
+	}
+}
+
+void Notification::setFc(std::vector<double> &v){
+
+	for (int i=0; i<(int)v.size(); i++){
+		_linkfc.push_back(v.at(i));
+	}
+}
+
+void Notification::setFc(double fc){
+
+		_linkfc.push_back(fc);
+}
+
+void Notification::setFlag(std::string flag){
+
+	_flag = flag;
+}
+void Notification::setSat(std::vector<double> &sat){
+
+	for (int i=0; i<(int)sat.size(); i++){
+		_Sat.push_back(sat.at(i));
+	}
+}
+
+void Notification::setChOcc(std::vector<double> &occ){
+
+	for (int i=0; i<(int)occ.size(); i++){
+		_ChOcc.push_back(occ.at(i));
+	}
+}
+
+
+std::string Notification::getType(){
+
+	return _type;
+}
+
+int Notification::getSender(){
+
+	return _sender;
+}
+
+int Notification::getDestination(){
+
+	return _destination;
+}
+
+Position Notification::getPosition(){
+
+	return _coordinates;
+}
+
+Capabilities Notification::getCapabilities(){
+
+	return _capabilities;
+}
+
+std::vector<double> Notification::getLinkQuality(){
+
+	return _linkQ;
+}
+
+std::vector<double> Notification::getFc(){
+
+	return _linkfc;
+}
+std::string Notification::getFlag(){
+
+	return _flag;
+}
+
+std::vector<double> Notification::getSat(){
+
+	return _Sat;
+}
+
+std::vector<double> Notification::getChOcc(){
+
+	return _ChOcc;
+}
+
+
+
+
+void AppCTRL::setTProfile(std::string p){
+
+	_tprofile = p;
+}
+
+std::string AppCTRL::getType(){
+
+	return _type;
+}
+
+int AppCTRL::getSender(){
+
+	return _sender;
+}
+
+int AppCTRL::getDestination(){
+
+	return _destination;
+}
+
+std::string AppCTRL::getTProfile(){
+
+	return _tprofile;
+}
+
+#line 24 "neko.cc"
+
+
+#line 1 "../Classes/interface.h"
+
+class Interface{
+
+public:
+
+  int id;											
+	int ChN;										
+	int ChW;										
+	double fc;										
+};
+
+
+class APInterface : public Interface{
+
+public:
+  double TOcc;
+  double ChOccSFlows;								
+  double ChOccNeighAPs;							
+
+public:
+  APInterface();
+  ~APInterface();
+};
+
+APInterface::APInterface(){
+  TOcc = 0;
+  ChOccSFlows = 0;
+  ChOccNeighAPs = 0;
+}
+
+APInterface::~APInterface(){
+  
+}
+
+
+class STAInterface : public Interface{
+
+public:
+  bool active;									
+};
+
+#line 25 "neko.cc"
+
+
+#line 1 "../Classes/agent.cc"
+
+
+#line 1 "../Classes/agent.h"
+
+class Agent{
+
+public:
+  Agent(std::string type, std::string trgt, std::string func):_type(type), _target(trgt), _OptFunct(func){};
+
+  std::string _type;                                                    
+  std::string _target;                                                  
+  std::string _OptFunct;                                                
+
+  std::vector<std::vector<double>> ActionSpace;                         
+  std::vector<std::vector<double>> Rewards;                             
+  std::vector<std::vector<double>> EstRewardAct;                        
+  std::vector<std::vector<double>> TimesActSel;                         
 
   
+  void setActSpace();
+  
 
-
-
-
-
+  
+  std::string getTarget();
+  std::vector<int> getNewAction(std::vector<std::pair<int,double>> &v);   
 };
 
+#line 2 "../Classes/agent.cc"
 
 
-struct ApNotification{
 
-  Header header;
+void Agent::setActSpace(){
 
-  int ChannelNumber;
-  double Load;
-  int flag;
+  if (_type.compare("AP") == 0){
+    ActionSpace = Channels;
+    for (int i=0; i<(int)ActionSpace.size(); i++){
+      std::vector<double> v((int)ActionSpace.at(i).size(), 0.0);
+      Rewards.push_back(v);
+      TimesActSel.push_back(v);
+      EstRewardAct.push_back(v);
+    }
+  }
+}
+
+
+
+
+
+
+std::string Agent::getTarget(){
+  return _target;
+}
+
+
+std::vector<int> Agent::getNewAction(std::vector<std::pair<int,double>> &ActRew_vector){
+
+  std::vector<int> new_actions;
+  for (int i=0; i<(int)ActRew_vector.size(); i++){
+    std::pair<int,double> p = ActRew_vector.at(i);
+    for (int j=0; j<(int)ActionSpace.size(); j++){
+      for (int n=0; n<(int)ActionSpace.at(i).size(); n++){
+        if (ActionSpace[j].at(n) == p.first){
+          TimesActSel[j].at(n) += 1;
+          Rewards[j].at(n) = p.second;
+          EstRewardAct[j].at(n) = ((EstRewardAct[j].at(n)*TimesActSel[j].at(n))+Rewards[j].at(n))/(TimesActSel[j].at(n)+2);
+          int action_arm = ThompsonSampling(ActionSpace.at(j).size(), &EstRewardAct.at(j), &TimesActSel.at(j));
+          new_actions.push_back(ActionSpace[j].at(action_arm));
+          
+        }
+      }
+    }
+  }
+
+  return new_actions;
+}
+
+#line 26 "neko.cc"
+
+
+#line 1 "../Classes/policy_manager.cc"
+
+
+#line 1 "../Classes/policy_manager.h"
+
+class PolicyManager {
+private:
+  std::string _policy;
+
+public:
+  PolicyManager ();
+
+  void setType(std::string);
+  std::string getType();
+
+  void AllocationFromPolicyEqual(Flow *, std::vector<WifiSTA> &, std::vector<APInterface> &);
+  void AllocationFromPolicyOne(Flow *, std::vector<WifiSTA> &, std::vector<APInterface> &);
+  void AllocationFromPolicyFixed(Flow *, std::vector<WifiSTA> &, std::vector<APInterface> &);
+  void AllocationFromPolicySplit(Flow *, std::vector<WifiSTA> &, std::vector<APInterface> &);
+
+  std::pair<bool,std::vector<double>> AllocationFromPolicyAdaptive(Flow *, std::vector<Flow> &, std::vector<WifiSTA> &, std::vector<APInterface> &, double);
 };
 
+#line 2 "../Classes/policy_manager.cc"
 
 
-struct StationInfo{
+PolicyManager::PolicyManager(){
 
-  Header header;
+}
 
-  double RSSI;
-  double AirTime;
-};
+void PolicyManager::setType(std::string type){
+  _policy = type;
+}
 
-struct Connection{
+std::string PolicyManager::getType(){
+  return _policy;
+}
 
-  Header header;
+void PolicyManager::AllocationFromPolicyEqual(Flow *flow, std::vector<WifiSTA> &AssociatedSTAs, std::vector<APInterface> &InterfaceContainer){
+  for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+    if (flow->getDestination() == AssociatedSTAs.at(i).id){
+      int sta_interfaces = (int)AssociatedSTAs.at(i).fc.size();
+      double fLength = flow->getLength();
+      double LChunk = fLength/sta_interfaces;
+      for (int j=0; j<(int)AssociatedSTAs.at(i).TxRate.size(); j++){
+        flow->setTxTime(CalculateTxTime(LChunk, AssociatedSTAs.at(i).TxRate.at(j)));
+        flow->setFc(AssociatedSTAs.at(i).fc.at(j));
+      }
+      break;
+    }
+  }
+}
 
-  double LoadByStation;
-  double Ap_Load;
-};
+void PolicyManager::AllocationFromPolicyOne(Flow *flow, std::vector<WifiSTA> &AssociatedSTAs, std::vector<APInterface> &InterfaceContainer){
 
-#line 17 "neko.cc"
+  double occ_max = 100;
+  int interface_index = -1;
+  for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+    if (flow->getDestination() == AssociatedSTAs.at(i).id){
+      if ((int)AssociatedSTAs.at(i).fc.size() > 1){
+        for (int j=0; j<(int)AssociatedSTAs.at(i).fc.size(); j++){
+          for (int n=0; n<(int)InterfaceContainer.size(); n++){
+            if (AssociatedSTAs.at(i).fc.at(j) == InterfaceContainer.at(n).fc){
+              if (InterfaceContainer.at(n).TOcc < occ_max) {
+                occ_max = InterfaceContainer.at(n).TOcc;
+                interface_index = j;
+              }
+            }
+          }
+        }
+        double fLength = flow->getLength();
+        flow->setTxTime(CalculateTxTime(fLength, AssociatedSTAs.at(i).TxRate.at(interface_index)));
+        flow->setFc(AssociatedSTAs.at(i).fc.at(interface_index));
+      }
+      else{
+        for (int n=0; n<(int)InterfaceContainer.size(); n++){
+          if (AssociatedSTAs.at(i).fc.at(0) == InterfaceContainer.at(n).fc){
+            interface_index = InterfaceContainer.at(n).id;
+          }
+        }
+        double fLength = flow->getLength();
+        flow->setTxTime(CalculateTxTime(fLength, AssociatedSTAs.at(i).TxRate.at(0)));
+        flow->setFc(AssociatedSTAs.at(i).fc.at(0));
+      }
+      break;
+    }
+  }
+}
+
+void PolicyManager::AllocationFromPolicyFixed(Flow *flow, std::vector<WifiSTA> &AssociatedSTAs, std::vector<APInterface> &InterfaceContainer){
+
+  int sta_index;
+  for (int i=0; i<(int)InterfaceContainer.size(); i++){
+    if (flow != nullptr){
+      for (int j=0; j<(int)AssociatedSTAs.size(); j++){
+        if (AssociatedSTAs.at(j).id == flow->getDestination()){
+          sta_index = j;
+          for (int n=0; n<(int)AssociatedSTAs.at(j).fc.size(); n++){
+            if (AssociatedSTAs.at(j).fc.at(n) == InterfaceContainer.at(i).fc){
+              flow->setFc(AssociatedSTAs.at(j).fc.at(n));
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  double fLength = flow->getLength();
+  std::vector<double> FlowFc = flow->getFc();
+  std::vector<double> allocated_load((int)FlowFc.size(), 0.0);
+  std::vector<double> interface_id, empty_load;
+
+  while (fLength > 1E-3){
+    empty_load.assign((int)FlowFc.size(), 0.0);
+    interface_id.clear();
+    double length = fLength;
+    if (FlowFc.size() > 1){
+      for (int j=0; j<(int)FlowFc.size(); j++){
+        for (int n=0; n<(int)InterfaceContainer.size(); n++){
+          if (FlowFc.at(j) == InterfaceContainer.at(n).fc){
+            if (InterfaceContainer.at(n).TOcc + allocated_load.at(j) < 1){
+              interface_id.push_back(InterfaceContainer.at(n).id);
+              empty_load.at(j) = 1-((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j)));
+              break;
+            }
+          }
+        }
+      }
+
+      if (interface_id.size() == 0){
+        for (int j=0; j<(int)FlowFc.size(); j++){
+          for (int n=0; n<(int)InterfaceContainer.size(); n++){
+            if (FlowFc.at(j) == InterfaceContainer.at(n).fc){
+              for (int m=0; m<(int)FlowFc.size(); m++){
+                for (int l=0; l<(int)InterfaceContainer.size(); l++){
+                  if (FlowFc.at(m) == InterfaceContainer.at(l).fc){
+                    if ((std::floor(InterfaceContainer.at(l).TOcc + allocated_load.at(m)) == std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j))) && (InterfaceContainer.at(l).id != InterfaceContainer.at(n).id)){
+                      if (interface_id.size() != 0){
+                        bool found = false;
+                        for (int f=0; f<(int)interface_id.size(); f++){
+                          if (interface_id.at(f) == InterfaceContainer.at(n).id){
+                            found = true;
+                            break;
+                          }
+                        }
+                        if (!found){
+                          interface_id.push_back(InterfaceContainer.at(n).id);
+                          empty_load.at(j) = 1-((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j)));
+                        }
+                      }
+                      else{
+                        interface_id.push_back(InterfaceContainer.at(n).id);
+                        empty_load.at(j) = 1-((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j)));
+                      }
+                    }
+                    break;
+                  }
+                }
+              }
+              break;
+            }
+          }
+        }
+      }
+      if (interface_id.size() != 0){
+        double empty_total = std::accumulate(empty_load.begin(), empty_load.end(), 0.0);
+        for (int j=0; j<(int)FlowFc.size(); j++){
+          for (int n=0; n<(int)InterfaceContainer.size(); n++){
+            if ((FlowFc.at(j) == InterfaceContainer.at(n).fc)){
+              double prop = empty_load.at(j)/empty_total;
+              for (int m=0; m<(int)AssociatedSTAs.at(sta_index).fc.size(); m++){
+                if (AssociatedSTAs.at(sta_index).fc.at(m) == FlowFc.at(j)){
+                  double tmp_load = CalculateTxTime(length, AssociatedSTAs.at(sta_index).TxRate.at(m))*prop;
+                  if ((std::ceil(InterfaceContainer.at(n).TOcc) == 0) || (InterfaceContainer.at(n).TOcc + allocated_load.at(j) == std::ceil(InterfaceContainer.at(n).TOcc+ allocated_load.at(j)))){
+                    allocated_load.at(j) += tmp_load;
+                    fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(m));
+                  }
+                  else if ((InterfaceContainer.at(n).TOcc + allocated_load.at(j) + tmp_load) < std::ceil(InterfaceContainer.at(n).TOcc + allocated_load.at(j))){
+                    allocated_load.at(j) += tmp_load;
+                    fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(m));
+                  }
+                  else{
+                    double time_left = 1-((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j)));
+                    if (time_left < tmp_load){
+                      allocated_load.at(j) += time_left;
+                      fLength -= GetFromTxTime(time_left, AssociatedSTAs.at(sta_index).TxRate.at(m));
+                    }
+                    else{
+                      allocated_load.at(j) += tmp_load;
+                      fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(m));
+                    }
+                  }
+                  break;
+                }
+              }
+              break;
+            }
+          }
+        }
+      }
+      else{
+        double load = 100;
+        int interface = -1;
+        for (int j=0; j<(int)FlowFc.size(); j++){
+          for (int n=0; n<(int)InterfaceContainer.size(); n++){
+            if ((FlowFc.at(j) == InterfaceContainer.at(n).fc) && ((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) < load)){
+              load = InterfaceContainer.at(n).TOcc + allocated_load.at(j);
+              interface = n;
+              break;
+            }
+          }
+        }
+        for (int j=0; j<(int)FlowFc.size(); j++){
+          if (InterfaceContainer.at(interface).fc == FlowFc.at(j)){
+            for (int n=0; n<(int)AssociatedSTAs.at(sta_index).fc.size(); n++){
+              if (AssociatedSTAs.at(sta_index).fc.at(n) == FlowFc.at(j)){
+                double tmp_load = CalculateTxTime(length, AssociatedSTAs.at(sta_index).TxRate.at(n));
+                if ((std::ceil(InterfaceContainer.at(interface).TOcc + allocated_load.at(j)) == 0) || (InterfaceContainer.at(interface).TOcc + allocated_load.at(j) == std::ceil(InterfaceContainer.at(interface).TOcc+ allocated_load.at(j)))){
+                  allocated_load.at(j) += tmp_load;
+                  fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(n));
+                }
+                else if ((InterfaceContainer.at(interface).TOcc + allocated_load.at(j) + tmp_load) < std::ceil(InterfaceContainer.at(interface).TOcc + allocated_load.at(j))){
+                  allocated_load.at(j) += tmp_load;
+                  fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(n));
+                }
+                else{
+                  double time_left = 1-((InterfaceContainer.at(interface).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(interface).TOcc + allocated_load.at(j)));
+                  if (time_left < tmp_load){
+                    allocated_load.at(j) += time_left;
+                    fLength -= GetFromTxTime(time_left, AssociatedSTAs.at(sta_index).TxRate.at(n));
+                  }
+                  else{
+                    allocated_load.at(j) += tmp_load;
+                    fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(n));
+                  }
+                }
+                break;
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+    else{
+      for (int j=0; j<(int)FlowFc.size(); j++){
+        for (int n=0; n<(int)AssociatedSTAs.at(sta_index).fc.size(); n++){
+          if (AssociatedSTAs.at(sta_index).fc.at(n) == FlowFc.at(j)){
+            allocated_load.at(j) = CalculateTxTime(length, AssociatedSTAs.at(sta_index).TxRate.at(n));
+            fLength = 0;
+          }
+        }
+      }
+    }
+  }
+
+  for (int i=0; i<(int)allocated_load.size(); i++){
+    flow->setTxTime(allocated_load.at(i));
+  }
+}
+
+std::pair<bool,std::vector<double>> PolicyManager::AllocationFromPolicyAdaptive(Flow *flow, std::vector<Flow> &OnGoingFlows, std::vector<WifiSTA> &AssociatedSTAs, std::vector<APInterface> &InterfaceContainer, double t){
+
+  std::vector<Flow> ActiveFlows = OnGoingFlows;
+  std::vector<double> InterfaceOcc, InterfaceFc;
+
+  for (int i=0; i<(int)InterfaceContainer.size(); i++){
+    InterfaceOcc.push_back(InterfaceContainer.at(i).ChOccSFlows);
+    InterfaceFc.push_back(InterfaceContainer.at(i).fc);
+    InterfaceContainer.at(i).TOcc -= InterfaceContainer.at(i).ChOccSFlows;
+    if (InterfaceContainer.at(i).TOcc < 1E-10)
+      InterfaceContainer.at(i).TOcc = 0;
+    InterfaceContainer.at(i).ChOccSFlows = 0;
+    if (flow != nullptr){
+      for (int j=0; j<(int)AssociatedSTAs.size(); j++){
+        if (AssociatedSTAs.at(j).id == flow->getDestination()){
+          for (int n=0; n<(int)AssociatedSTAs.at(j).fc.size(); n++){
+            if (AssociatedSTAs.at(j).fc.at(n) == InterfaceContainer.at(i).fc){
+              flow->setFc(AssociatedSTAs.at(j).fc.at(n));
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  if (flow != nullptr){
+    ActiveFlows.push_back(*flow);
+  }
+
+  std::sort(ActiveFlows.begin(), ActiveFlows.end(), [](Flow& lhs, Flow &rhs){
+    return lhs.getFc().size() < rhs.getFc().size();
+  });
+
+  for (int i=0; i<(int)ActiveFlows.size();i++){
+
+    double fLength = ActiveFlows.at(i).getLength();
+    std::vector<double> FlowFc = ActiveFlows.at(i).getFc();
+    std::vector<double> allocated_load((int)FlowFc.size(), 0.0);
+    std::vector<double> interface_id, empty_load;
+
+    double sta_index;
+    for (int j=0; j<(int)AssociatedSTAs.size(); j++){
+      if (AssociatedSTAs.at(j).id == ActiveFlows.at(i).getDestination()){
+        sta_index = j;
+        break;
+      }
+    }
+
+    while (fLength > 1E-3){
+      empty_load.assign((int)FlowFc.size(), 0.0);
+      interface_id.clear();
+      double length = fLength;
+      if (FlowFc.size() > 1){
+        for (int j=0; j<(int)FlowFc.size(); j++){
+          for (int n=0; n<(int)InterfaceContainer.size(); n++){
+            if (FlowFc.at(j) == InterfaceContainer.at(n).fc){
+              if (InterfaceContainer.at(n).TOcc + allocated_load.at(j) < 1){
+                interface_id.push_back(InterfaceContainer.at(n).id);
+                empty_load.at(j) = 1-((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j)));
+              }
+              break;
+            }
+          }
+        }
+        if (interface_id.size() == 0){
+          for (int j=0; j<(int)FlowFc.size(); j++){
+            for (int n=0; n<(int)InterfaceContainer.size(); n++){
+              if (FlowFc.at(j) == InterfaceContainer.at(n).fc){
+                for (int m=0; m<(int)FlowFc.size(); m++){
+                  for (int l=0; l<(int)InterfaceContainer.size(); l++){
+                    if (FlowFc.at(m) == InterfaceContainer.at(l).fc){
+                      if (InterfaceContainer.at(n).TOcc + allocated_load.at(j) < 1){
+                        interface_id.push_back(InterfaceContainer.at(n).id);
+                        empty_load.at(j) = 1-((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j)));
+                      }
+
+                      else if ((std::floor(InterfaceContainer.at(l).TOcc + allocated_load.at(m)) == std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j))) && (InterfaceContainer.at(l).id != InterfaceContainer.at(n).id)){
+                        if (interface_id.size() != 0){
+                          bool found = false;
+                          for (int f=0; f<(int)interface_id.size(); f++){
+                            if (interface_id.at(f) == InterfaceContainer.at(n).id){
+                              found = true;
+                              break;
+                            }
+                          }
+                          if (!found){
+                            interface_id.push_back(InterfaceContainer.at(n).id);
+                            empty_load.at(j) = 1-((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j)));
+                          }
+                        }
+                        else{
+                          interface_id.push_back(InterfaceContainer.at(n).id);
+                          empty_load.at(j) = 1-((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j)));
+                        }
+                      }
+                      break;
+                    }
+                  }
+                }
+                break;
+              }
+            }
+          }
+        }
+        if (interface_id.size() != 0){
+          double empty_total = std::accumulate(empty_load.begin(), empty_load.end(), 0.0);
+          for (int j=0; j<(int)FlowFc.size(); j++){
+            for (int n=0; n<(int)InterfaceContainer.size(); n++){
+              if ((FlowFc.at(j) == InterfaceContainer.at(n).fc)){
+                double prop = empty_load.at(j)/empty_total;
+                for (int m=0; m<(int)AssociatedSTAs.at(sta_index).fc.size(); m++){
+                  if (AssociatedSTAs.at(sta_index).fc.at(m) == FlowFc.at(j)){
+                    double tmp_load = CalculateTxTime(length, AssociatedSTAs.at(sta_index).TxRate.at(m))*prop;
+                    if ((std::ceil(InterfaceContainer.at(n).TOcc) == 0) || (InterfaceContainer.at(n).TOcc + allocated_load.at(j) == std::ceil(InterfaceContainer.at(n).TOcc+ allocated_load.at(j)))){
+                      allocated_load.at(j) += tmp_load;
+                      fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(m));
+                    }
+                    else if ((InterfaceContainer.at(n).TOcc + allocated_load.at(j) + tmp_load) < std::ceil(InterfaceContainer.at(n).TOcc + allocated_load.at(j))){
+                      allocated_load.at(j) += tmp_load;
+                      fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(m));
+                    }
+                    else{
+                      double time_left = 1-((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(n).TOcc + allocated_load.at(j)));
+                      if (time_left < tmp_load){
+                        allocated_load.at(j) += time_left;
+                        fLength -= GetFromTxTime(time_left, AssociatedSTAs.at(sta_index).TxRate.at(m));
+                      }
+                      else{
+                        allocated_load.at(j) += tmp_load;
+                        fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(m));
+                      }
+                    }
+                    break;
+                  }
+                }
+                break;
+              }
+            }
+          }
+        }
+        else{
+          double load = 100;
+          int interface = -1;
+          for (int j=0; j<(int)FlowFc.size(); j++){
+            for (int n=0; n<(int)InterfaceContainer.size(); n++){
+              if ((FlowFc.at(j) == InterfaceContainer.at(n).fc) && ((InterfaceContainer.at(n).TOcc + allocated_load.at(j)) < load)){
+                load = InterfaceContainer.at(n).TOcc + allocated_load.at(j);
+                interface = n;
+                break;
+              }
+            }
+          }
+          for (int j=0; j<(int)FlowFc.size(); j++){
+            if (InterfaceContainer.at(interface).fc == FlowFc.at(j)){
+              for (int n=0; n<(int)AssociatedSTAs.at(sta_index).fc.size(); n++){
+                if (AssociatedSTAs.at(sta_index).fc.at(n) == FlowFc.at(j)){
+                  double tmp_load = CalculateTxTime(length, AssociatedSTAs.at(sta_index).TxRate.at(n));
+                  if ((std::ceil(InterfaceContainer.at(interface).TOcc + allocated_load.at(j)) == 0) || (InterfaceContainer.at(interface).TOcc + allocated_load.at(j) == std::ceil(InterfaceContainer.at(interface).TOcc+ allocated_load.at(j)))){
+                     allocated_load.at(j) += tmp_load;
+                     fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(n));
+                  }
+                  else if ((InterfaceContainer.at(interface).TOcc + allocated_load.at(j) + tmp_load) < std::ceil(InterfaceContainer.at(interface).TOcc + allocated_load.at(j))){
+                     allocated_load.at(j) += tmp_load;
+                     fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(n));
+                  }
+                  else{
+                    double time_left = 1-((InterfaceContainer.at(interface).TOcc + allocated_load.at(j)) - std::floor(InterfaceContainer.at(interface).TOcc + allocated_load.at(j)));
+                    if (time_left < tmp_load){
+                      allocated_load.at(j) += time_left;
+                      fLength -= GetFromTxTime(time_left, AssociatedSTAs.at(sta_index).TxRate.at(n));
+                    }
+                    else{
+                      allocated_load.at(j) += tmp_load;
+                      fLength -= GetFromTxTime(tmp_load, AssociatedSTAs.at(sta_index).TxRate.at(n));
+                    }
+                  }
+                  break;
+                }
+              }
+              break;
+            }
+          }
+        }
+      }
+      else{
+        for (int j=0; j<(int)FlowFc.size(); j++){
+          for (int n=0; n<(int)AssociatedSTAs.at(sta_index).fc.size(); n++){
+            if (AssociatedSTAs.at(sta_index).fc.at(n) == FlowFc.at(j)){
+              allocated_load.at(j) = CalculateTxTime(length, AssociatedSTAs.at(sta_index).TxRate.at(n));
+              fLength = 0;
+            }
+          }
+        }
+      }
+    }
+
+    if (flow != nullptr){
+      if (ActiveFlows.at(i).getDestination() == flow->getDestination()){
+        for (int j=0; j<(int)allocated_load.size(); j++){
+          flow->setTxTime(allocated_load.at(j));
+        }
+      }
+      else{
+        for (int j=0; j<(int)FlowFc.size(); j++){
+          for (int n=0; n<(int)InterfaceContainer.size(); n++){
+            if (FlowFc.at(j) == InterfaceContainer.at(n).fc){
+              InterfaceContainer.at(n).ChOccSFlows += allocated_load.at(j);
+              InterfaceContainer.at(n).TOcc += allocated_load.at(j);
+            }
+          }
+        }
+
+        for (int j=0; j<(int)OnGoingFlows.size(); j++){
+          if (OnGoingFlows.at(j).getDestination() == ActiveFlows.at(i).getDestination()){
+            OnGoingFlows.at(j).UpdateTxTime(allocated_load);
+            break;
+          }
+        }
+      }
+    }
+    else{
+      for (int j=0; j<(int)FlowFc.size(); j++){
+        for (int n=0; n<(int)InterfaceContainer.size(); n++){
+          if (FlowFc.at(j) == InterfaceContainer.at(n).fc){
+            InterfaceContainer.at(n).ChOccSFlows += allocated_load.at(j);
+            InterfaceContainer.at(n).TOcc += allocated_load.at(j);
+          }
+        }
+      }
+      for (int j=0; j<(int)OnGoingFlows.size(); j++){
+        if (OnGoingFlows.at(j).getDestination() == ActiveFlows.at(i).getDestination()){
+          OnGoingFlows.at(j).UpdateTxTime(allocated_load);
+          break;
+        }
+      }
+    }
+  }
+  bool change = false;
+  for (int j=0; j<(int)InterfaceOcc.size(); j++){
+    InterfaceOcc.at(j) = InterfaceContainer.at(j).ChOccSFlows-InterfaceOcc.at(j);
+    if ((InterfaceOcc.at(j) != 0) && (change == false))
+      change = true;
+  }
+  return std::make_pair(change, InterfaceOcc);
+}
+
+void PolicyManager::AllocationFromPolicySplit(Flow *flow, std::vector<WifiSTA> &AssociatedSTAs, std::vector<APInterface> &InterfaceContainer){
+
+  std::string type = flow->getType();
+  if (type.compare("STREAMING") == 0){
+    for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+      if (flow->getDestination() == AssociatedSTAs.at(i).id){
+        for (int j=0; j<(int)AssociatedSTAs.at(i).fc.size(); j++){
+          std::string band = GetBand(AssociatedSTAs.at(i).fc.at(j));
+          if (band.compare("6GHz") == 0){
+            double fLength = flow->getLength();
+            flow->setTxTime(CalculateTxTime(fLength, AssociatedSTAs.at(i).TxRate.at(j)));
+            flow->setFc(AssociatedSTAs.at(i).fc.at(j));
+            break; 
+          }
+        }
+      }
+    }
+  }
+  else{
+    double occ_max = 100;
+    int interface_index = -1;
+    for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+      if (flow->getDestination() == AssociatedSTAs.at(i).id){
+        for (int j=0; j<(int)AssociatedSTAs.at(i).fc.size(); j++){
+          std::string band = GetBand(AssociatedSTAs.at(i).fc.at(j));
+          if (band.compare("6GHz") != 0){
+            for (int n=0; n<(int)InterfaceContainer.size(); n++){
+              if (AssociatedSTAs.at(i).fc.at(j) == InterfaceContainer.at(n).fc){
+                if (InterfaceContainer.at(n).TOcc < occ_max) {
+                  occ_max = InterfaceContainer.at(n).TOcc;
+                  interface_index = j;
+                }
+                break;
+              }
+            }
+          }
+        }
+        double fLength = flow->getLength();
+        flow->setTxTime(CalculateTxTime(fLength, AssociatedSTAs.at(i).TxRate.at(interface_index)));
+        flow->setFc(AssociatedSTAs.at(i).fc.at(interface_index));
+      }
+    }
+  }
+}
+
+#line 27 "neko.cc"
 
 
-#line 1 "ap.h"
-#ifndef _AP_
-#define _AP_
+#line 1 "application.h"
+
+#ifndef _APP_
+#define _APP_
 
 #include <cmath>
 #include <algorithm>
@@ -2259,10 +3159,24 @@ struct Connection{
 #include <string>
 
 
-#line 645 "ap.h"
+#line 122 "application.h"
 #endif
 
-#line 18 "neko.cc"
+#line 28 "neko.cc"
+
+
+#line 1 "ap.h"
+
+#ifndef _AP_
+#define _AP_
+
+std::default_random_engine gen(rand());
+
+
+#line 611 "ap.h"
+#endif
+
+#line 29 "neko.cc"
 
 
 #line 1 "station.h"
@@ -2270,26 +3184,75 @@ struct Connection{
 #define _STA_
 
 
-#include <cmath>
-#include <algorithm>
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <list>
-#include <vector>
-#include <time.h>
-#include <deque>
-
-
-
-#line 507 "station.h"
+#line 330 "station.h"
 #endif
 
-#line 19 "neko.cc"
+#line 30 "neko.cc"
 
 
 #include "compcxx_neko.h"
-class compcxx_AP_9;/*template <class T> */
+
+#line 7 "ap.h"
+class compcxx_AP_5 : public compcxx_component, public TypeII {
+
+public:
+
+	int apID;                                       
+
+	Position coordinates;														
+	Capabilities capabilities;											
+	Configuration configuration;										
+	PolicyManager policy_manager;										
+
+	std::vector<APInterface> InterfaceContainer;		
+	std::vector<WifiAP> NeighboringAPs;							
+	std::vector<WifiSTA> AssociatedSTAs;						
+	std::vector<Flow> OnGoingFlows;									
+	
+
+	APStatistics statistics;												
+
+public:
+
+	compcxx_AP_5();																							
+	~compcxx_AP_5();																						
+
+	void Setup();																			
+	void Start();																			
+	void Stop();																			
+
+	
+	
+	/*inport */void inCtrlApp(AppCTRL &n);								
+	/*inport */void inCtrlSTA(Notification &n);						
+	/*inport */void inCtrlAP(Notification &n);						
+	
+
+	
+	class my_AP_outDataSTA_f_t:public compcxx_functor<AP_outDataSTA_f_t>{ public:void  operator() (Flow &q) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(q); return (c[0]->*f[0])(q);};};my_AP_outDataSTA_f_t outDataSTA_f;/*outport void outDataSTA(Flow &q)*/;									
+	class my_AP_outCtrlApp_f_t:public compcxx_functor<AP_outCtrlApp_f_t>{ public:void  operator() (AppCTRL &n) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(n); return (c[0]->*f[0])(n);};};my_AP_outCtrlApp_f_t outCtrlApp_f;/*outport void outCtrlApp(AppCTRL &n)*/;							
+	class my_AP_outCtrlSTA_f_t:public compcxx_functor<AP_outCtrlSTA_f_t>{ public:void  operator() (Notification &n) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(n); return (c[0]->*f[0])(n);};};my_AP_outCtrlSTA_f_t outCtrlSTA_f;/*outport void outCtrlSTA(Notification &n)*/;					
+	class my_AP_outCtrlAP_f_t:public compcxx_functor<AP_outCtrlAP_f_t>{ public:void  operator() (Notification &n) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(n); return (c[0]->*f[0])(n);};};my_AP_outCtrlAP_f_t outCtrlAP_f;/*outport void outCtrlAP(Notification &n)*/;					
+	
+
+	
+	
+	
+
+	
+	void Initialization();														
+	Flow CreateFlow(int, int, std::string);						
+	void AcceptIncomingFlow(Flow &f);									
+	void RegisterAT(Flow &f);													
+	void NotifyApp(std::string, int);									
+	void NotifyNeighbors(std::string, std::vector<double> *o, std::vector<double> *f); 
+	void NotifySTA(std::string, Notification *n);			
+	
+	void Send(Flow &f);																
+	void CollectStatistics(Flow *f);									
+};
+
+class compcxx_Application_7;/*template <class T> */
 #line 267 "../COST/cost.h"
 class compcxx_Timer_3 : public compcxx_component, public TimerBase
 {
@@ -2310,9 +3273,9 @@ class compcxx_Timer_3 : public compcxx_component, public TimerBase
  private:
   CostSimEng* m_simeng;
   event_t m_event;
-public:compcxx_AP_9* p_compcxx_parent;};
+public:compcxx_Application_7* p_compcxx_parent;};
 
-class compcxx_AP_9;/*template <class T> */
+class compcxx_Application_7;/*template <class T> */
 #line 267 "../COST/cost.h"
 class compcxx_Timer_2 : public compcxx_component, public TimerBase
 {
@@ -2333,119 +3296,44 @@ class compcxx_Timer_2 : public compcxx_component, public TimerBase
  private:
   CostSimEng* m_simeng;
   event_t m_event;
-public:compcxx_AP_9* p_compcxx_parent;};
-
-class compcxx_AP_9;/*template <class T> */
-#line 267 "../COST/cost.h"
-class compcxx_Timer_4 : public compcxx_component, public TimerBase
-{
- public:
-  struct event_t : public CostEvent { trigger_t data; };
-  
-
-  compcxx_Timer_4() { m_simeng = CostSimEng::Instance(); m_event.active= false; }
-  inline void Set(trigger_t const &, double );
-  inline void Set(double );
-  inline double GetTime() { return m_event.time; }
-  inline bool Active() { return m_event.active; }
-  inline trigger_t & GetData() { return m_event.data; }
-  inline void SetData(trigger_t const &d) { m_event.data = d; }
-  void Cancel();
-  /*outport void to_component(trigger_t &)*/;
-  void activate(CostEvent*);
- private:
-  CostSimEng* m_simeng;
-  event_t m_event;
-public:compcxx_AP_9* p_compcxx_parent;};
+public:compcxx_Application_7* p_compcxx_parent;};
 
 
-#line 13 "ap.h"
-class compcxx_AP_9 : public compcxx_component, public TypeII {
+#line 14 "application.h"
+class compcxx_Application_7 : public compcxx_component, public TypeII {
 
 public:
 
-  
-  int apID;                                                     
-  double X, Y, Z;                                               
-  int numOfConnectedStations;                                   
-  double trafficLoad;                                           
-
-  int actionSelected;
-  int channelBW;                                                
-  int txPower;                                                  
-  int OperatingChannel;                                         
-  double frequency;                                             
-  double CCA;                                                   
-
-  int IEEEprotocolType;                                         
-  std::vector<int> CHMapToAction;                               
-  std::vector<int> setOfactions;                                
-
-  
-  std::vector<int> vectorOfConnectedStations;                   
-  std::vector<double> vectorOfConnectedStationsRSSIs;           
-
-  std::vector<int> vectorOfNeighboringAPs;                      
-  std::vector<double> vectorOfNeighboringRSSIs;                 
-
-  std::vector<double> CH_occupancy_detected;                    
-
-  
-  std::vector<double> reward_action;                            
-  std::vector<double> occupancy_CH;                             
-  std::vector<double> estimated_reward_action;
-  std::vector<int> TimesActionIsPicked;                               
-  std::vector< std::vector<double> > estimated_reward_Per_action;    
-  std::vector< std::vector<double> > estimated_reward_Per_action_Time;
-
-  
-  std::vector<int> Action_Selected;                             
-  std::vector<double> channel_reward;                           
-  std::vector<double> occupanyOfAp;                             
-  std::vector<double> TimeSimulation;
-
-  std::vector<int> ActionChange;
-  std::vector<double> TimeStamp;
-
-  double iter;
-  int flag, isolation;
+	int srcID;																									
+	int destID;																									
+	std::string TProfile;																			
 
 public:
 
-  compcxx_AP_9();
+	
+	compcxx_Application_7();
+	~compcxx_Application_7();
 
-  
-  void Setup();
-  void Start();
-  void Stop();
+	
+	void Setup();
+	void Start();
+	void Stop();
 
-  
-  /*inport */void inSetNeighbors(APBeacon &b);
-  /*inport */void inSetClientAssociation(StationInfo &i);
-  /*inport */void inRequestedAirTime(Connection &n);
-  /*inport */void inTxTimeFinished(Connection &n);
-  /*inport */void inLoadFromNeighbor(ApNotification &ap);
-  /*inport */void inUpdateConnection(StationInfo &i, int k);
-  /*inport */void inUpdateAttachedStationsParams(StationInfo &i);
+	
+	/*inport */void inCtrlAP (AppCTRL &n);
 
-  
-  class my_AP_outSetNeighbors_f_t:public compcxx_functor<AP_outSetNeighbors_f_t>{ public:void  operator() (APBeacon &b) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(b); return (c[0]->*f[0])(b);};};my_AP_outSetNeighbors_f_t outSetNeighbors_f;/*outport void outSetNeighbors(APBeacon &b)*/;
-  class my_AP_outSendBeaconToNodes_f_t:public compcxx_functor<AP_outSendBeaconToNodes_f_t>{ public:void  operator() (APBeacon &b) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(b); return (c[0]->*f[0])(b);};};my_AP_outSendBeaconToNodes_f_t outSendBeaconToNodes_f;/*outport void outSendBeaconToNodes(APBeacon &b)*/;
-  class my_AP_outAssignAirTime_f_t:public compcxx_functor<AP_outAssignAirTime_f_t>{ public:void  operator() (Connection &n) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(n); return (c[0]->*f[0])(n);};};my_AP_outAssignAirTime_f_t outAssignAirTime_f;/*outport void outAssignAirTime(Connection &n)*/;
-  class my_AP_outLoadToNeighbor_f_t:public compcxx_functor<AP_outLoadToNeighbor_f_t>{ public:void  operator() (ApNotification &ap) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(ap); return (c[0]->*f[0])(ap);};};my_AP_outLoadToNeighbor_f_t outLoadToNeighbor_f;/*outport void outLoadToNeighbor(ApNotification &ap)*/;
-  class my_AP_outChannelChange_f_t:public compcxx_functor<AP_outChannelChange_f_t>{ public:void  operator() (APBeacon &b) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(b); return (c[0]->*f[0])(b);};};my_AP_outChannelChange_f_t outChannelChange_f;/*outport void outChannelChange(APBeacon &b)*/;
+	
+	class my_Application_outCtrlAP_f_t:public compcxx_functor<Application_outCtrlAP_f_t>{ public:void  operator() (AppCTRL &n) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(n); return (c[0]->*f[0])(n);};};my_Application_outCtrlAP_f_t outCtrlAP_f;/*outport void outCtrlAP (AppCTRL &n)*/;
 
-  
-  compcxx_Timer_2 /*<trigger_t> */trigger_Action;
-  compcxx_Timer_3 /*<trigger_t> */trigger_APBootUp;
-  compcxx_Timer_4 /*<trigger_t> */trigger_progress;
+	
+	compcxx_Timer_2 /*<trigger_t> */start;
+	compcxx_Timer_3 /*<trigger_t> */end;
 
-  /*inport */inline void CHselectionBylearning(trigger_t&);
-  /*inport */inline void APBootUp(trigger_t&);
-  /*inport */inline void ProgressFunct(trigger_t&);
+	/*inport */inline void Start(trigger_t&);
+	/*inport */inline void End(trigger_t&);
 };
 
-class compcxx_Station_10;/*template <class T> */
+class compcxx_Neko_9;/*template <class T> */
 #line 267 "../COST/cost.h"
 class compcxx_Timer_8 : public compcxx_component, public TimerBase
 {
@@ -2466,17 +3354,17 @@ class compcxx_Timer_8 : public compcxx_component, public TimerBase
  private:
   CostSimEng* m_simeng;
   event_t m_event;
-public:compcxx_Station_10* p_compcxx_parent;};
+public:compcxx_Neko_9* p_compcxx_parent;};
 
-class compcxx_Station_10;/*template <class T> */
+class compcxx_STA_6;/*template <class T> */
 #line 267 "../COST/cost.h"
-class compcxx_Timer_5 : public compcxx_component, public TimerBase
+class compcxx_Timer_4 : public compcxx_component, public TimerBase
 {
  public:
   struct event_t : public CostEvent { trigger_t data; };
   
 
-  compcxx_Timer_5() { m_simeng = CostSimEng::Instance(); m_event.active= false; }
+  compcxx_Timer_4() { m_simeng = CostSimEng::Instance(); m_event.active= false; }
   inline void Set(trigger_t const &, double );
   inline void Set(double );
   inline double GetTime() { return m_event.time; }
@@ -2489,166 +3377,666 @@ class compcxx_Timer_5 : public compcxx_component, public TimerBase
  private:
   CostSimEng* m_simeng;
   event_t m_event;
-public:compcxx_Station_10* p_compcxx_parent;};
-
-class compcxx_Station_10;/*template <class T> */
-#line 267 "../COST/cost.h"
-class compcxx_Timer_6 : public compcxx_component, public TimerBase
-{
- public:
-  struct event_t : public CostEvent { trigger_t data; };
-  
-
-  compcxx_Timer_6() { m_simeng = CostSimEng::Instance(); m_event.active= false; }
-  inline void Set(trigger_t const &, double );
-  inline void Set(double );
-  inline double GetTime() { return m_event.time; }
-  inline bool Active() { return m_event.active; }
-  inline trigger_t & GetData() { return m_event.data; }
-  inline void SetData(trigger_t const &d) { m_event.data = d; }
-  void Cancel();
-  /*outport void to_component(trigger_t &)*/;
-  void activate(CostEvent*);
- private:
-  CostSimEng* m_simeng;
-  event_t m_event;
-public:compcxx_Station_10* p_compcxx_parent;};
-
-class compcxx_Station_10;/*template <class T> */
-#line 267 "../COST/cost.h"
-class compcxx_Timer_7 : public compcxx_component, public TimerBase
-{
- public:
-  struct event_t : public CostEvent { trigger_t data; };
-  
-
-  compcxx_Timer_7() { m_simeng = CostSimEng::Instance(); m_event.active= false; }
-  inline void Set(trigger_t const &, double );
-  inline void Set(double );
-  inline double GetTime() { return m_event.time; }
-  inline bool Active() { return m_event.active; }
-  inline trigger_t & GetData() { return m_event.data; }
-  inline void SetData(trigger_t const &d) { m_event.data = d; }
-  void Cancel();
-  /*outport void to_component(trigger_t &)*/;
-  void activate(CostEvent*);
- private:
-  CostSimEng* m_simeng;
-  event_t m_event;
-public:compcxx_Station_10* p_compcxx_parent;};
+public:compcxx_STA_6* p_compcxx_parent;};
 
 
-#line 16 "station.h"
-class compcxx_Station_10 : public compcxx_component, public TypeII {
-
-public:
-  int staID;                                                        
-  int userType;                                                     
-  int servingAP;                                                    
-  double X, Y, Z;                                                   
-
-  int txPower;                                                      
-  double DLDataRate;                                                
-  double ULDataRate;                                                
-  double RSSI;                                                      
-  int ChBW;                                                         
-  double frequency;                                                 
-  int IEEE_protocol;                                                
-
-  double AirTimeRequired;                                           
-  int FlowType;                                                     
-
-  std::deque <APBeacon> detectedWLANs;                              
-  std::vector<int> InRangeAPs;                                      
-  std::vector<int> CandidateAPs;                                    
-
-
-  
-  std::vector<double> AirTimeEvo;                                   
-  std::vector<double> Satisfaction;                                 
-  std::vector<double> CandidateAPsTrafficLoad;                      
-
-  std::vector<double> reward_action;                                
-  std::vector<double> estimated_reward_action;
-  std::vector<double> occupancy_AP;                                 
-
-  std::vector<int> Times_ActionSelected;                            
-  std::vector<int> Action_Selected;                                 
-  std::vector<int> ActionChange;
-  std::vector<double> TimeStamp;
-  std::vector<double> Throughput;
-
-  std::vector< std::vector<double> > estimated_reward_Per_action;    
-  std::vector< std::vector<double> > estimated_reward_Per_action_Time;
-
-  std::vector<double> mSat;
-  std::vector<double> timeSim;                                      
-  std::vector<double> timeSim2;                                     
-
-  
-  double iter;
-  int flag, TimeSizeF, TimeSizeS;
-  double requestedBW, startTX, finishTX, bits_Sent, totalBits, timeActive;
+#line 4 "station.h"
+class compcxx_STA_6 : public compcxx_component, public TypeII {
 
 public:
 
-  compcxx_Station_10();
+	int staID;																						
+	int servingAP;																				
+	std::string state;																		
+	std::string traffic_type;															
 
-  
-  void Setup();
-  void Start();
-  void Stop();
+	Position coordinates;																	
+	Configuration configuration;													
+	Capabilities capabilities;														
 
-  
-  /*inport */void inReceivedBeacon(APBeacon &b);
-  /*inport */void inAssignedAirTime(Connection &n);
-  /*inport */void inUpdateStationParameters(APBeacon &b);
+	std::vector<STAInterface> InterfaceContainer;					
+	std::vector<WifiAP> InRangeAPs;												
+	std::deque <Notification> Queue;
 
-  
-  class my_Station_outSetClientAssociation_f_t:public compcxx_functor<Station_outSetClientAssociation_f_t>{ public:void  operator() (StationInfo &i) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(i); return (c[0]->*f[0])(i);};};my_Station_outSetClientAssociation_f_t outSetClientAssociation_f;/*outport void outSetClientAssociation(StationInfo &i)*/;
-  class my_Station_outRequestAirTime_f_t:public compcxx_functor<Station_outRequestAirTime_f_t>{ public:void  operator() (Connection &n) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(n); return (c[0]->*f[0])(n);};};my_Station_outRequestAirTime_f_t outRequestAirTime_f;/*outport void outRequestAirTime(Connection &n)*/;
-  class my_Station_outFlowEnded_f_t:public compcxx_functor<Station_outFlowEnded_f_t>{ public:void  operator() (Connection &n) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(n); return (c[0]->*f[0])(n);};};my_Station_outFlowEnded_f_t outFlowEnded_f;/*outport void outFlowEnded(Connection &n)*/;
-  class my_Station_outUpdateAttachedStationsParams_f_t:public compcxx_functor<Station_outUpdateAttachedStationsParams_f_t>{ public:void  operator() (StationInfo &i) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(i); return (c[0]->*f[0])(i);};};my_Station_outUpdateAttachedStationsParams_f_t outUpdateAttachedStationsParams_f;/*outport void outUpdateAttachedStationsParams(StationInfo &i)*/;
-  class my_Station_outUpdateConnection_f_t:public compcxx_functor<Station_outUpdateConnection_f_t>{ public:void  operator() (StationInfo &i, int k) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(i,k); return (c[0]->*f[0])(i,k);};};my_Station_outUpdateConnection_f_t outUpdateConnection_f;/*outport void outUpdateConnection(StationInfo &i, int k)*/;
+	Flow flow;																						
+	STAStatistics statistics;															
 
-  
-  compcxx_Timer_5 /*<trigger_t> */trigger_ProcessBeacons;
-  compcxx_Timer_6 /*<trigger_t> */trigger_SendRequestedAT;
-  compcxx_Timer_7 /*<trigger_t> */trigger_TxTimeFinished;
-  compcxx_Timer_8 /*<trigger_t> */trigger_Action;
+public:
 
-  /*inport */inline void ProcessBeacons(trigger_t&);
-  /*inport */inline void SendRequestedAT(trigger_t&);
-  /*inport */inline void SendTxTimeFinished(trigger_t&);
-  /*inport */inline void APselectionBylearning(trigger_t&);
+	compcxx_STA_6();
+	~compcxx_STA_6();
 
+	void Setup();																					
+	void Start();																					
+	void Stop();																					
+
+	
+	/*inport */void inCrtlAP(Notification &n);								
+	/*inport */void inDataAP(Flow &f);												
+
+	
+	class my_STA_outCtrlAP_f_t:public compcxx_functor<STA_outCtrlAP_f_t>{ public:void  operator() (Notification &n) { for (unsigned int compcxx_i=1;compcxx_i<c.size();compcxx_i++)(c[compcxx_i]->*f[compcxx_i])(n); return (c[0]->*f[0])(n);};};my_STA_outCtrlAP_f_t outCtrlAP_f;/*outport void outCtrlAP(Notification &n)*/;							
+
+	
+	
+	
+
+	compcxx_Timer_4 /*<trigger_t> */WaitProbes;
+	/*inport */inline void Discovery(trigger_t&);
+
+	
+	void Initialization();																
+	void NotifyAP(std::string, std::vector<double> *v);
+	void DoMLOSetup(Notification &n);
+	void UpdateInterfaces(Notification &n);
+	void CalculateStats();
 };
 
 
-#line 21 "neko.cc"
-class compcxx_Neko_11 : public compcxx_component, public CostSimEng {
+#line 32 "neko.cc"
+class compcxx_Neko_9 : public compcxx_component, public CostSimEng {
 
 public:
 
-  
-  void Setup();
-  void Start();
-  void Stop();
+	
+	void Setup();
+	void Start();
+	void Stop();
 
-  
-  void GenerateRandom();
-  void LoadScenario();
+	
+	void GenerateRandom();
+	void GenerateResultReport();
+	
 
 public:
+	int seed;
 
-  compcxx_array<compcxx_AP_9  >APoint_container;
-  compcxx_array<compcxx_Station_10  >STA_container;
+	compcxx_array<compcxx_AP_5  >APContainer;
+  compcxx_array<compcxx_STA_6  >STAContainer;
+	compcxx_array<compcxx_Application_7  >AppContainer;
 
-  int seed;
-
-  int numOfAPs;
-  int numOfStations;
+	compcxx_Timer_8 /*<trigger_t> */Progress;
+	/*inport */inline void ProgressBar(trigger_t&);
 };
+
+
+#line 66 "ap.h"
+compcxx_AP_5::compcxx_AP_5 (){
+	
+}
+
+
+#line 70 "ap.h"
+compcxx_AP_5::~compcxx_AP_5(){
+
+}
+
+
+#line 74 "ap.h"
+void compcxx_AP_5::Setup(){
+
+}
+
+
+#line 78 "ap.h"
+void compcxx_AP_5::Start(){
+	Initialization();
+}
+
+
+#line 82 "ap.h"
+void compcxx_AP_5::Stop(){
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+#line 96 "ap.h"
+void compcxx_AP_5::Initialization(){
+
+	int intSz = maxIntNum;
+	for (int i=0; i<intSz; i++){
+		
+		
+
+		APInterface interface;
+		interface.id = i;
+		
+		interface.ChN = Channels[i].at(0);
+		std::pair<double, int> p = GetFromChN(interface.ChN);
+		interface.fc = p.first;
+		interface.ChW = p.second;
+		InterfaceContainer.push_back(interface);
+	}
+
+	if (capabilities.Multilink){
+		policy_manager.setType(policy);
+	}
+	else{
+		policy_manager.setType("ALL_ONE");
+	}
+
+	NotifyNeighbors("AP_NEIGHBOR_DISCOVERY", nullptr, nullptr);
+}
+
+
+
+
+
+
+
+
+
+
+
+#line 132 "ap.h"
+void compcxx_AP_5::NotifyNeighbors(std::string type,std::vector<double> *occ, std::vector<double> *fc){
+
+	if (type.compare("AP_NEIGHBOR_DISCOVERY") == 0){
+		std::vector<double> int_fc;
+		for (int i=0; i<(int)InterfaceContainer.size(); i++){
+			int_fc.push_back(InterfaceContainer.at(i).fc);
+		}
+		Notification notification ("AP_NEIGHBOR_DISCOVERY", apID, -1);
+		notification.setPosition(coordinates);
+		notification.setCapabilities(capabilities);
+		notification.setFc(int_fc);
+		(outCtrlAP_f(notification));
+	}
+	else if ((type.compare("FLOW_START") == 0) || (type.compare("ADD") == 0)){
+		for (int i=0; i<(int)NeighboringAPs.size(); i++){
+			Notification notification ("AP_LOAD", apID, NeighboringAPs.at(i).id);
+			notification.setFlag("ADD");
+			notification.setChOcc(*occ);
+			notification.setFc(*fc);
+			(outCtrlAP_f(notification));
+		}
+	}
+	else if ((type.compare("FLOW_END") == 0) || (type.compare("REMOVE") == 0)){
+		for (int i=0; i<(int)NeighboringAPs.size(); i++){
+			Notification notification ("AP_LOAD", apID, NeighboringAPs.at(i).id);
+			notification.setFlag("REMOVE");
+			notification.setChOcc(*occ);
+			notification.setFc(*fc);
+			(outCtrlAP_f(notification));
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 176 "ap.h"
+void compcxx_AP_5::inCtrlAP(Notification &n){
+
+	std::string type = n.getType();
+
+	if ((n.getDestination() == -1)){
+		if(type.compare("AP_NEIGHBOR_DISCOVERY") == 0){
+
+			Position sender_coordinates = n.getPosition();
+			std::vector<double> sender_Fc = n.getFc();
+			std::vector<double> overlapping_fc;
+
+			for (int i=0; i<(int)sender_Fc.size(); i++){
+				double RxRSSI = CalculateRSSI(configuration.TxPower, sender_Fc.at(i), coordinates.x, coordinates.y, coordinates.z, sender_coordinates.x, sender_coordinates.y, sender_coordinates.z);
+				if (RxRSSI >= configuration.CCA){
+					overlapping_fc.push_back(sender_Fc.at(i));
+				}
+			}
+			if ((int)overlapping_fc.size() !=0){
+				WifiAP ap;
+				ap.id = n.getSender();
+				ap.coord = n.getPosition();
+				ap.ChOcc.assign(overlapping_fc.size(), 0.0);
+				for (int i=0; i<(int)overlapping_fc.size(); i++){
+					ap.fc.push_back(overlapping_fc.at(i));
+				}
+				NeighboringAPs.push_back(ap);
+			}
+		}
+	}
+	else{
+		if (n.getDestination() == apID){
+			if (type.compare("AP_LOAD") == 0){
+				bool update_load = false;
+				for (int i=0; i<(int)NeighboringAPs.size(); i++){
+					if (n.getSender() == NeighboringAPs.at(i).id){
+						if (NeighboringAPs.at(i).fc.size()!=0){
+
+							std::vector<double> neigh_occ = n.getChOcc();
+							std::vector<double> neigh_fc = n.getFc();
+							std::string t_flag = n.getFlag();
+							for (int j=0; j<(int)NeighboringAPs.at(i).fc.size(); j++){
+								for (int n=0; n<(int)neigh_fc.size(); n++){
+									if ((NeighboringAPs.at(i).fc.at(j) == neigh_fc.at(n)) && (t_flag.compare("ADD")==0)){
+										update_load = true;
+										NeighboringAPs.at(i).ChOcc.at(j) += neigh_occ.at(n);
+										break;
+									}
+									else if ((NeighboringAPs.at(i).fc.at(j) == neigh_fc.at(n)) && (t_flag.compare("REMOVE")==0)){
+										update_load = true;
+										NeighboringAPs.at(i).ChOcc.at(j) -= neigh_occ.at(n);
+										if (NeighboringAPs.at(i).ChOcc.at(j) < 1E-10)
+											NeighboringAPs.at(i).ChOcc.at(j) = 0;
+										break;
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if (update_load){
+					for (int i=0; i<(int)InterfaceContainer.size(); i++){
+						InterfaceContainer.at(i).TOcc -= InterfaceContainer.at(i).ChOccNeighAPs;
+						InterfaceContainer.at(i).ChOccNeighAPs = 0;
+						std::string Int_band = GetBand(InterfaceContainer.at(i).fc);
+						for (int j=0; j<(int)NeighboringAPs.size(); j++){
+							for (int n=0; n<(int)NeighboringAPs.at(j).fc.size(); n++){
+								std::string Neigh_band = GetBand(NeighboringAPs.at(j).fc.at(n));
+								if (Int_band.compare(Neigh_band) == 0){
+									if (CheckNeighChOverlapp(InterfaceContainer.at(i).fc, NeighboringAPs.at(j).fc.at(n))){
+										InterfaceContainer.at(i).ChOccNeighAPs += NeighboringAPs.at(j).ChOcc.at(n);
+									}
+									break;
+								}
+							}
+						}
+						InterfaceContainer.at(i).TOcc += InterfaceContainer.at(i).ChOccNeighAPs;
+					}
+				}
+				NotifySTA("SAT_UPDATE", nullptr);
+			}
+			else if (type.compare("CHANNEL_SWITCH_AP") == 0){
+				for (int i=0; i<(int)NeighboringAPs.size(); i++){
+					if (n.getSender() == NeighboringAPs.at(i).id){
+						NeighboringAPs.at(i).fc.clear(); 
+						std::vector<double> neigh_fc = n.getFc(); 
+						for (int j=0; j<(int)neigh_fc.size(); j++){
+							double RxRSSI = CalculateRSSI(configuration.TxPower, neigh_fc.at(j), coordinates.x, coordinates.y, coordinates.z, NeighboringAPs.at(i).coord.x, NeighboringAPs.at(i).coord.y, NeighboringAPs.at(i).coord.z);
+							if (RxRSSI >= configuration.CCA){
+								NeighboringAPs.at(i).fc.push_back(neigh_fc.at(j));
+							}
+						}
+						break;
+					}
+				}
+			}
+		}
+	}
+}
+
+
+
+
+
+
+
+#line 281 "ap.h"
+Flow compcxx_AP_5::CreateFlow(int src, int dest, std::string type){
+
+	Flow flow;
+	flow.setSender(src);
+	flow.setDestination(dest);
+	flow.setType(type);
+	flow.setTimeStamp(SimTime());
+
+	if (type.compare("STREAMING")==0){
+		std::uniform_real_distribution<double>BWGen(1, 1);
+		flow.setLength(BWGen(gen));
+	}
+	else{
+		std::uniform_real_distribution<double>BWGen(2, medBW);
+		flow.setLength(BWGen(gen));
+	}
+
+	return flow;
+}
+
+
+
+
+
+
+
+
+#line 307 "ap.h"
+void compcxx_AP_5::AcceptIncomingFlow(Flow &f){
+
+	std::string type = f.getType();
+	if ((type.compare("STREAMING") == 0)||(type.compare("ELASTIC") == 0)){
+		OnGoingFlows.push_back(f);
+		RegisterAT(f);
+	}
+}
+
+
+
+
+
+
+
+
+
+#line 323 "ap.h"
+void compcxx_AP_5::RegisterAT(Flow &f){
+
+	std::vector<double> FTxTimes = f.getTxTime();
+	std::vector<double> FlowFc = f.getFc();
+
+	for (int i=0; i<(int)FlowFc.size(); i++){
+		for (int j=0; j<(int)InterfaceContainer.size(); j++){
+			if (FlowFc.at(i) == InterfaceContainer.at(j).fc){
+				InterfaceContainer.at(j).ChOccSFlows += FTxTimes.at(i);
+				InterfaceContainer.at(j).TOcc = InterfaceContainer.at(j).ChOccSFlows + InterfaceContainer.at(j).ChOccNeighAPs;
+				break;
+			}
+		}
+	}
+	Send(f);
+	NotifySTA("SAT_UPDATE", nullptr);
+	NotifyNeighbors("FLOW_START", &FTxTimes, &FlowFc);
+}
+
+
+
+
+
+
+
+
+
+
+#line 350 "ap.h"
+void compcxx_AP_5::NotifySTA(std::string type, Notification *n){
+
+	if (type.compare("PROBE_RESP") == 0){
+		Notification notification ("PROBE_RESP", apID, n->getSender());
+		notification.setPosition(coordinates);
+		notification.setCapabilities(capabilities);
+		notification.setFc(InterfaceContainer.at(0).fc);
+		(outCtrlSTA_f(notification));
+	}
+	else if (type.compare("CONFIG_RESP") == 0){
+		Notification notification ("CONFIG_RESP", apID, n->getSender());
+		notification.setPosition(coordinates);
+		for (int i=0; i<(int)InterfaceContainer.size(); i++){
+			notification.setFc(InterfaceContainer.at(i).fc);
+		}
+		(outCtrlSTA_f(notification));
+	}
+	else if (type.compare("MLO_SETUP_RESP") == 0){
+		for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+			if (AssociatedSTAs.at(i).id == n->getSender()){
+
+				
+				AssociatedSTAs.at(i).fc.clear();
+				AssociatedSTAs.at(i).RSSI.clear();
+				AssociatedSTAs.at(i).SNR.clear();
+				AssociatedSTAs.at(i).TxRate.clear();
+
+				std::vector<double> sta_linkQ = n->getLinkQuality();
+				for (int j=0; j<(int)sta_linkQ.size(); j++){
+					if (sta_linkQ.at(j) >= configuration.CCA){
+						double Dl_RSSI = CalculateRSSI(configuration.TxPower, InterfaceContainer.at(j).fc, coordinates.x, coordinates.y, coordinates.z, AssociatedSTAs.at(i).coord.x, AssociatedSTAs.at(i).coord.y, AssociatedSTAs.at(i).coord.z);
+						double Dl_SNR = CalculateSNR(Dl_RSSI, InterfaceContainer.at(j).ChW);
+						double Dl_TxRate = CalculateDataRate(Dl_SNR, InterfaceContainer.at(j).fc, InterfaceContainer.at(j).ChW, capabilities, configuration);
+
+						if (Dl_TxRate != 0){
+							AssociatedSTAs.at(i).fc.push_back(InterfaceContainer.at(j).fc);
+							AssociatedSTAs.at(i).RSSI.push_back(Dl_RSSI);
+							AssociatedSTAs.at(i).SNR.push_back(Dl_SNR);
+							AssociatedSTAs.at(i).TxRate.push_back(Dl_TxRate);
+						}
+					}
+				}
+
+				
+				NotifyApp("CTRL_START", n->getSender());
+
+
+				
+				Notification notification ("MLO_SETUP_RESP", apID, n->getSender());
+				notification.setFc(AssociatedSTAs.at(i).fc);
+				(outCtrlSTA_f(notification));
+			}
+		}
+	}
+	else if (type.compare("SAT_UPDATE") == 0){
+
+		for (int i=0; i<(int)OnGoingFlows.size(); i++){
+			std::vector<double> fc = OnGoingFlows.at(i).getFc();
+			std::vector<double> txtimes = OnGoingFlows.at(i).getTxTime();
+			std::vector<double> ATSat((int)InterfaceContainer.size(), -1.0);
+
+			for (int j=0; j<(int)fc.size(); j++){
+				for (int n=0; n<(int)InterfaceContainer.size(); n++){
+					
+					if ((fc.at(j) == InterfaceContainer.at(n).fc) && (txtimes.at(j) != 0)){
+						double Sat = std::min(1.0,InterfaceContainer.at(n).TOcc)/InterfaceContainer.at(n).TOcc;
+						ATSat.at(n) = Sat;
+						break;
+					}
+				}
+			}
+			OnGoingFlows.at(i).setSat(ATSat);
+			Notification notification ("SAT_UPDATE", apID,  OnGoingFlows.at(i).getDestination());
+			notification.setSat(ATSat);
+			(outCtrlSTA_f(notification));
+		}
+		CollectStatistics(nullptr);
+	}
+	else if (type.compare("FLOW_END") == 0){
+		(outCtrlSTA_f(*n));
+	}
+}
+
+
+
+
+
+
+
+
+
+
+#line 441 "ap.h"
+void compcxx_AP_5::NotifyApp(std::string type, int destination){
+
+	if (type.compare("CTRL_START") == 0){
+		for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+			if (destination == AssociatedSTAs.at(i).id){
+				AppCTRL app_ctrl("CTRL_START", apID, destination);
+				app_ctrl.setTProfile(AssociatedSTAs.at(i).traffic_type);
+				(outCtrlApp_f(app_ctrl));
+				break;
+			}
+		}
+	}
+	else{
+		AppCTRL app_ctrl ("CTRL_CANCEL", apID, destination);
+		(outCtrlApp_f(app_ctrl));
+	}
+}
+
+
+
+
+
+
+
+
+
+
+#line 467 "ap.h"
+void compcxx_AP_5::inCtrlSTA(Notification &n){
+
+	std::string type = n.getType();
+
+	if (n.getDestination() == apID){
+		if (type.compare("PROBE_REQ") == 0){
+			NotifySTA("PROBE_RESP", &n);
+		}
+		if (type.compare("CONFIG_REQ") == 0){
+			NotifySTA("CONFIG_RESP", &n);
+		}
+		else if(type.compare("MLO_SETUP_REQ") == 0){
+			NotifySTA("MLO_SETUP_RESP", &n);
+		}
+		else if(type.compare("UPDATE_MLO") == 0){
+			NotifySTA("MLO_SETUP_RESP", &n);
+		}
+		else if (type.compare("STA_DEASSOCIATION") == 0){
+			for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+				if (n.getSender() == AssociatedSTAs.at(i).id){
+					AssociatedSTAs.erase(AssociatedSTAs.begin()+i);
+					NotifyApp("CTRL_CANCEL", n.getSender());
+				}
+			}
+		}
+	}
+	else if ((n.getDestination() == -1) && (type.compare("PROBE_REQ") == 0)){
+		NotifySTA("PROBE_RESP", &n);
+	}
+}
+
+
+
+
+
+
+
+
+#line 504 "ap.h"
+void compcxx_AP_5::inCtrlApp(AppCTRL &n){
+
+	if (n.getSender() == apID){
+		std::string type = n.getType();
+		if(type.compare("FLOW_START") == 0){
+			for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+				if (n.getDestination() == AssociatedSTAs.at(i).id){
+
+					Flow flow = CreateFlow(apID, n.getDestination(), AssociatedSTAs.at(i).traffic_type);
+					std::string policy_type = policy_manager.getType();
+
+					if (policy_type.compare("MSLA") == 0){
+						policy_manager.AllocationFromPolicyEqual(&flow, AssociatedSTAs, InterfaceContainer);
+					}
+					else if (policy_type.compare("SLCI") == 0){
+						policy_manager.AllocationFromPolicyOne(&flow, AssociatedSTAs, InterfaceContainer);
+					}
+					else if (policy_type.compare("MCAA") == 0){
+						policy_manager.AllocationFromPolicyFixed(&flow, AssociatedSTAs, InterfaceContainer);
+					}
+					else if (policy_type.compare("VIDEO_DATA_SPLIT") == 0){
+						policy_manager.AllocationFromPolicySplit(&flow, AssociatedSTAs, InterfaceContainer);
+					}
+
+					AcceptIncomingFlow(flow);
+					break;
+				}
+			}
+		}
+		else{
+			for (int i=0; i<(int)OnGoingFlows.size(); i++){
+				if (n.getDestination() == OnGoingFlows.at(i).getDestination()){
+
+					std::vector<double> FlowFc = OnGoingFlows.at(i).getFc();
+					std::vector<double> FTxTimes = OnGoingFlows.at(i).getTxTime();
+
+					for (int j=0; j<(int)FlowFc.size(); j++){
+						for (int m=0; m<(int)InterfaceContainer.size(); m++){
+							if (FlowFc.at(j) == InterfaceContainer.at(m).fc){
+								InterfaceContainer.at(m).ChOccSFlows -= FTxTimes.at(j);
+								if (InterfaceContainer.at(m).ChOccSFlows < 1E-10){
+			            InterfaceContainer.at(m).ChOccSFlows = 0;
+			          }
+								InterfaceContainer.at(m).TOcc = InterfaceContainer.at(m).ChOccSFlows + InterfaceContainer.at(m).ChOccNeighAPs;
+							}
+						}
+					}
+
+					Notification notification ("FLOW_END", apID, OnGoingFlows.at(i).getDestination());
+					NotifySTA("FLOW_END", &notification);
+					NotifyNeighbors("FLOW_END", &FTxTimes, &FlowFc);
+					CollectStatistics(&OnGoingFlows.at(i));
+					OnGoingFlows.erase(OnGoingFlows.begin()+i);
+					break;
+				}
+			}
+		}
+	}
+}
+
+
+
+
+
+
+#line 568 "ap.h"
+void compcxx_AP_5::Send(Flow &f){
+	(outDataSTA_f(f));
+}
+
+
+
+
+
+
+
+#line 577 "ap.h"
+void compcxx_AP_5::CollectStatistics(Flow *flow){
+
+ if (flow != nullptr){
+	 double drop_Ratio = flow->getDratio();
+	 statistics.AvgDRPerFlow.push_back(drop_Ratio);
+	 std::vector<double> ChOcc((int)InterfaceContainer.size(), -1), ChRew((int)InterfaceContainer.size(), -1);
+	 for (int i=0; i<(int)InterfaceContainer.size(); i++){
+		 ChOcc.at(i) = std::min(1.0,InterfaceContainer.at(i).TOcc);
+		 ChRew.at(i) = std::max(0.0,1-InterfaceContainer.at(i).TOcc);
+	 }
+	 statistics.ChOcc.push_back(ChOcc);
+	 statistics.ChReward.push_back(ChRew);
+	 statistics.SimT.push_back(SimTime());
+ }
+ else{
+	 std::vector<double> ChOcc((int)InterfaceContainer.size(), -1), ChRew((int)InterfaceContainer.size(), -1);
+	 for (int i=0; i<(int)InterfaceContainer.size(); i++){
+		 ChOcc.at(i) = std::min(1.0,InterfaceContainer.at(i).TOcc);
+		 ChRew.at(i) = std::max(0.0,1-InterfaceContainer.at(i).TOcc);
+	 }
+	 statistics.ChOcc.push_back(ChOcc);
+	 statistics.ChReward.push_back(ChRew);
+	 statistics.SimT.push_back(SimTime());
+	}
+}
+
+
+
+
+
+
+
+
 
 
 #line 288 "../COST/cost.h"
@@ -2702,7 +4090,7 @@ public:
 {
   assert(e==&m_event);
   m_event.active=false;
-  (p_compcxx_parent->APBootUp(m_event.data));
+  (p_compcxx_parent->End(m_event.data));
 }
 
 
@@ -2759,7 +4147,159 @@ public:
 {
   assert(e==&m_event);
   m_event.active=false;
-  (p_compcxx_parent->CHselectionBylearning(m_event.data));
+  (p_compcxx_parent->Start(m_event.data));
+}
+
+
+
+
+#line 43 "application.h"
+
+#line 44 "application.h"
+
+#line 47 "application.h"
+compcxx_Application_7::compcxx_Application_7(){
+
+	start.p_compcxx_parent=this /*connect start.to_component,*/;
+	end.p_compcxx_parent=this /*connect end.to_component,*/;
+}
+
+
+#line 53 "application.h"
+compcxx_Application_7::~compcxx_Application_7(){
+
+}
+
+
+#line 57 "application.h"
+void compcxx_Application_7::Setup(){
+
+	
+}
+
+
+#line 62 "application.h"
+void compcxx_Application_7::Start(){
+
+	
+}
+
+
+#line 67 "application.h"
+void compcxx_Application_7::Stop(){
+
+	
+}
+
+
+#line 72 "application.h"
+void compcxx_Application_7::Start(trigger_t&){
+
+	
+	AppCTRL ctrl("FLOW_START", srcID, destID);
+	(outCtrlAP_f(ctrl));
+
+	
+
+	if (TProfile.compare("STREAMING") != 0){
+		end.Set(SimTime()+Exponential(t_EndFlow));
+	}
+	else{
+		end.Set(runTime-(1E-3));
+	}
+}
+
+
+
+#line 89 "application.h"
+void compcxx_Application_7::End(trigger_t&){
+
+	
+	AppCTRL ctrl("FLOW_END", srcID, destID);
+	(outCtrlAP_f(ctrl));
+
+	
+	start.Set(SimTime()+Exponential(t_ActFlow));
+}
+
+
+#line 99 "application.h"
+void compcxx_Application_7::inCtrlAP (AppCTRL &m){
+
+	if (m.getDestination() == destID){
+
+		std::string type = m.getType();
+
+		if (type.compare("CTRL_START") == 0){
+
+			srcID = m.getSender();
+			TProfile = m.getTProfile();
+
+			if ((TProfile.compare("STREAMING") == 0)||(TProfile.compare("ELASTIC") == 0)){
+				start.Set(SimTime()+Exponential(t_ActFlow));
+			}
+		}
+		else if (type.compare("CTRL_CANCEL") == 0){
+			
+			if (start.Active())
+				start.Cancel();
+		}
+	}
+}
+
+
+#line 288 "../COST/cost.h"
+
+#line 288 "../COST/cost.h"
+/*template <class T>
+*/void compcxx_Timer_8/*<trigger_t >*/::Set(trigger_t const & data, double time)
+{
+  if(m_event.active)
+    m_simeng->CancelEvent(&m_event);
+  m_event.time = time;
+  m_event.data = data;
+  m_event.object = this;
+  m_event.active=true;
+  m_simeng->ScheduleEvent(&m_event);
+}
+
+
+#line 300 "../COST/cost.h"
+
+#line 300 "../COST/cost.h"
+/*template <class T>
+*/void compcxx_Timer_8/*<trigger_t >*/::Set(double time)
+{
+  if(m_event.active)
+    m_simeng->CancelEvent(&m_event);
+  m_event.time = time;
+  m_event.object = this;
+  m_event.active=true;
+  m_simeng->ScheduleEvent(&m_event);
+}
+
+
+#line 311 "../COST/cost.h"
+
+#line 311 "../COST/cost.h"
+/*template <class T>
+*/void compcxx_Timer_8/*<trigger_t >*/::Cancel()
+{
+  if(m_event.active)
+    m_simeng->CancelEvent(&m_event);
+  m_event.active = false;
+}
+
+
+#line 319 "../COST/cost.h"
+
+#line 319 "../COST/cost.h"
+/*template <class T>
+*/void compcxx_Timer_8/*<trigger_t >*/::activate(CostEvent*e)
+{
+  assert(e==&m_event);
+  m_event.active=false;
+  (p_compcxx_parent->ProgressBar(m_event.data));
 }
 
 
@@ -2816,1488 +4356,562 @@ public:
 {
   assert(e==&m_event);
   m_event.active=false;
-  (p_compcxx_parent->ProgressFunct(m_event.data));
+  (p_compcxx_parent->Discovery(m_event.data));
 }
 
 
 
 
-#line 93 "ap.h"
+#line 45 "station.h"
 
-#line 94 "ap.h"
-
-#line 95 "ap.h"
-
-#line 98 "ap.h"
-compcxx_AP_9 :: compcxx_AP_9(){
-  trigger_Action.p_compcxx_parent=this /*connect trigger_Action.to_component,*/;
-  trigger_APBootUp.p_compcxx_parent=this /*connect trigger_APBootUp.to_component,*/;
-  trigger_progress.p_compcxx_parent=this /*connect trigger_progress.to_component,*/;
+#line 55 "station.h"
+compcxx_STA_6::compcxx_STA_6 (){
+	WaitProbes.p_compcxx_parent=this /*connect WaitProbes.to_component,*/;
+	
 }
 
 
-#line 104 "ap.h"
-void compcxx_AP_9 :: Setup(){
-
+#line 60 "station.h"
+compcxx_STA_6::~compcxx_STA_6 (){
 }
 
 
-#line 108 "ap.h"
-void compcxx_AP_9 :: Start(){
-
-  switch (IEEEprotocolType) {
-    case 0:{
-      int actions [] = {0,1,2};
-      int Channel [] = {1,6,11};
-      int size = sizeof(actions)/sizeof(int);
-
-      for (int i=0; i<size; i++){
-        setOfactions.push_back(actions[i]);
-        CHMapToAction.push_back(Channel[i]);
-      }
-      TimesActionIsPicked.assign(size,0.0);
-      CH_occupancy_detected.assign(size, 0.0);
-      trigger_APBootUp.Set(0);
-
-    }break;
-
-    case 1:{
-
-      int actions [] = {0,1,2,3};
-      int Channel [] = {36,40,44,48};
-      int size = sizeof(actions)/sizeof(int);
-
-      for (int i=0; i<size; i++){
-        setOfactions.push_back(actions[i]);
-        CHMapToAction.push_back(Channel[i]);
-      }
-      TimesActionIsPicked.assign(size,0.0);
-      CH_occupancy_detected.assign(size, 0.0);
-      trigger_APBootUp.Set(0);
-
-    }break;
-
-    case 2:{
-
-      int actions [] = {0,1,2};
-      int Channel [] = {36,40,44};
-      int size = sizeof(actions)/sizeof(int);
-
-      for (int i=0; i<size; i++){
-        setOfactions.push_back(actions[i]);
-        CHMapToAction.push_back(Channel[i]);
-      }
-      TimesActionIsPicked.assign(size,0.0);
-      CH_occupancy_detected.assign(size, 0.0);
-
-      trigger_APBootUp.Set(0);
-
-    }break;
-  }
-
-  if (apID == 0) {
-    trigger_progress.Set(4320);
-  }
-
-  iter = 1;
-  flag = 0;
-  isolation = 0;
-}
-
-
-#line 169 "ap.h"
-void compcxx_AP_9 :: Stop(){
+#line 63 "station.h"
+void compcxx_STA_6::Setup(){
 
 }
 
 
-#line 173 "ap.h"
-void compcxx_AP_9 :: APBootUp(trigger_t&){
-
-  double *selectConfiguration = GetConfiguration(IEEEprotocolType, actionSelected);
-
-  channelBW = *selectConfiguration;
-  OperatingChannel = *(selectConfiguration+1);
-  frequency = *(selectConfiguration+2);
-
-  APBeacon beacon;
-
-  beacon.header.sourceID = apID;
-  beacon.header.X = X;
-  beacon.header.Y = Y;
-  beacon.header.Z = Z;
-  beacon.Tx_Power = txPower;
-  beacon.freq = frequency;
-  beacon.protocolType = IEEEprotocolType;
-  beacon.BW = channelBW;
-
-  if (isolation == 0) {
-    (outSetNeighbors_f(beacon));
-  }
-
-  (outSendBeaconToNodes_f(beacon));
-
-  ActionChange.push_back(actionSelected);
-  TimeStamp.push_back(SimTime());
-
-  switch (APlearningFlag) {
-    case 0:{
-      
-    }break;
-
-    case 1:{
-
-      int size = setOfactions.size();
-
-      reward_action.assign(size,0.0);
-      occupancy_CH.assign(size,0.0);
-
-      trigger_Action.Set(SimTime()+Exponential(2)+offsetAP);
-
-    }break;
-
-    case 2:{
-
-      int size = setOfactions.size();
-
-      reward_action.assign(size,0.0);
-      occupancy_CH.assign(size,0.0);
-      estimated_reward_action.assign(size,0.0);
-      estimated_reward_Per_action.resize(size);
-      estimated_reward_Per_action_Time.resize(size);
-
-      trigger_Action.Set(SimTime()+Exponential(2)+offsetAP);
-
-    }break;
-  }
+#line 67 "station.h"
+void compcxx_STA_6::Start(){
+	Initialization();
 }
 
 
-#line 233 "ap.h"
-void compcxx_AP_9 :: inSetNeighbors (APBeacon &b){
-
-  double RSSIvalue;
-  RSSIvalue = txPower - PropL(b.header.X,b.header.Y,b.header.Z,X,Y,Z,b.freq);
-
-  if (RSSIvalue>=CCA){
-    vectorOfNeighboringAPs.push_back(b.header.sourceID);
-    vectorOfNeighboringRSSIs.push_back(RSSIvalue);
-  }
-}
-
-
-#line 244 "ap.h"
-void compcxx_AP_9 :: inSetClientAssociation (StationInfo &s){
-
-  if (s.header.destinationID == apID){
-
-    numOfConnectedStations++;
-    vectorOfConnectedStations.push_back(s.header.sourceID);
-    vectorOfConnectedStationsRSSIs.push_back(s.RSSI);
-  }
-}
-
-
-#line 254 "ap.h"
-void compcxx_AP_9 :: inRequestedAirTime(Connection &STARequest){
-
-  if (apID == STARequest.header.destinationID){
-    trafficLoad = trafficLoad + STARequest.LoadByStation;
-
-    Connection APResponse;
-    APResponse.header.sourceID = apID;
-    APResponse.Ap_Load = trafficLoad;
-
-    if ((int)vectorOfConnectedStations.size() != 0){
-      for (int i=0;i<(int)vectorOfConnectedStations.size();i++){
-        APResponse.header.destinationID = vectorOfConnectedStations.at(i);
-        (outAssignAirTime_f(APResponse));
-      }
-    }
-
-    ApNotification AddLoad;
-    AddLoad.Load = STARequest.LoadByStation;
-    AddLoad.ChannelNumber = OperatingChannel;
-    AddLoad.flag = 1;
-
-    if ((int)vectorOfNeighboringAPs.size() != 0){
-      for (int i=0;i<(int)vectorOfNeighboringAPs.size();i++){
-        AddLoad.header.destinationID = vectorOfNeighboringAPs.at(i);
-        (outLoadToNeighbor_f(AddLoad));
-      }
-    }
-
-    channel_reward.push_back(std::max(0.0,1-(double)(trafficLoad/100)));
-    Action_Selected.push_back(actionSelected);
-
-    if (trafficLoad < 100){
-      occupanyOfAp.push_back(trafficLoad);
-      TimeSimulation.push_back(SimTime());
-    }
-    else{
-      occupanyOfAp.push_back((double)100);
-      TimeSimulation.push_back(SimTime());
-    }
-  }
-}
-
-
-#line 296 "ap.h"
-void compcxx_AP_9 :: inTxTimeFinished(Connection &EndConn){
-
-  if (apID == EndConn.header.destinationID){
-    trafficLoad = trafficLoad - EndConn.LoadByStation;
-
-    if (trafficLoad < 0.00001){
-      trafficLoad = 0;
-    }
-
-    Connection APResponse;
-    APResponse.Ap_Load = trafficLoad;
-    APResponse.header.sourceID = apID;
-
-    if ((int)vectorOfConnectedStations.size() != 0){
-      for (int i=0;i<(int)vectorOfConnectedStations.size();i++){
-        if (vectorOfConnectedStations.at(i) !=EndConn.header.sourceID){
-          APResponse.header.destinationID = vectorOfConnectedStations.at(i);
-          (outAssignAirTime_f(APResponse));
-        }
-      }
-    }
-
-    ApNotification RemoveLoad;
-    RemoveLoad.Load = EndConn.LoadByStation;
-    RemoveLoad.ChannelNumber = OperatingChannel;
-    RemoveLoad.flag = 0;
-
-    if ((int)vectorOfNeighboringAPs.size() != 0){
-      for (int i=0;i<(int)vectorOfNeighboringAPs.size();i++){
-        RemoveLoad.header.destinationID = vectorOfNeighboringAPs.at(i);
-        (outLoadToNeighbor_f(RemoveLoad));
-      }
-    }
-
-    channel_reward.push_back(std::max(0.0,1-(double)(trafficLoad/100)));
-    Action_Selected.push_back(actionSelected);
-
-    if (trafficLoad < 100){
-      occupanyOfAp.push_back(trafficLoad);
-      TimeSimulation.push_back(SimTime());
-    }
-    else{
-      occupanyOfAp.push_back((double)100);
-      TimeSimulation.push_back(SimTime());
-    }
-  }
-}
-
-
-#line 344 "ap.h"
-void compcxx_AP_9 :: inLoadFromNeighbor(ApNotification &notification){
-
-  if (apID == notification.header.destinationID){
-
-    int Neighbor_CH_index;
-    for (int i=0; i<(int)CHMapToAction.size(); i++){
-      if (notification.ChannelNumber == CHMapToAction.at(i)){
-        Neighbor_CH_index = i;
-      }
-    }
-
-    int overlapping = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,notification.ChannelNumber);
-
-    if (notification.flag == 1){
-      if (overlapping == 1){
-        CH_occupancy_detected.at(Neighbor_CH_index) = CH_occupancy_detected.at(Neighbor_CH_index)+notification.Load;
-        trafficLoad = trafficLoad + notification.Load;
-      }
-      else{
-        CH_occupancy_detected.at(Neighbor_CH_index) = CH_occupancy_detected.at(Neighbor_CH_index)+notification.Load;
-      }
-    }
-    if (notification.flag == 0){
-      if (overlapping == 1){
-        trafficLoad = trafficLoad - notification.Load;
-        if (trafficLoad < 0.00001){
-          trafficLoad = 0;
-        }
-        CH_occupancy_detected.at(Neighbor_CH_index) = CH_occupancy_detected.at(Neighbor_CH_index)-notification.Load;
-        if (CH_occupancy_detected.at(Neighbor_CH_index) < 0.00001){
-          CH_occupancy_detected.at(Neighbor_CH_index) = 0;
-        }
-      }
-      else{
-        CH_occupancy_detected.at(Neighbor_CH_index) = CH_occupancy_detected.at(Neighbor_CH_index)-notification.Load;
-        if (CH_occupancy_detected.at(Neighbor_CH_index) < 0.00001){
-          CH_occupancy_detected.at(Neighbor_CH_index) = 0;
-        }
-      }
-    }
-
-
-    channel_reward.push_back(std::max(0.0,1-(double)(trafficLoad/100)));
-    Action_Selected.push_back(actionSelected);
-
-    if (trafficLoad < 100){
-      occupanyOfAp.push_back(trafficLoad);
-      TimeSimulation.push_back(SimTime());
-    }
-    else{
-      occupanyOfAp.push_back((double)100);
-      TimeSimulation.push_back(SimTime());
-    }
-
-    if (trafficLoad >= 100){
-      for (int i=0;i<(int)vectorOfConnectedStations.size();i++){
-        Connection update;
-        update.header.sourceID = apID;
-        update.header.destinationID = vectorOfConnectedStations.at(i);
-        update.Ap_Load = trafficLoad;
-        (outAssignAirTime_f(update));
-      }
-    }
-  }
-}
-
-
-#line 410 "ap.h"
-void compcxx_AP_9 :: inUpdateConnection(StationInfo &info, int oldAP){
-
-  if (apID == oldAP){
-    for (int i=0; i<(int)vectorOfConnectedStations.size(); i++){
-      if (vectorOfConnectedStations.at(i) == info.header.sourceID){
-        vectorOfConnectedStations.erase(vectorOfConnectedStations.begin()+i);
-        vectorOfConnectedStationsRSSIs.erase(vectorOfConnectedStationsRSSIs.begin()+i);
-        numOfConnectedStations = numOfConnectedStations - 1;
-      }
-    }
-  }
-
-  if (apID == info.header.destinationID){
-    numOfConnectedStations++;
-    vectorOfConnectedStations.push_back(info.header.sourceID);
-    vectorOfConnectedStationsRSSIs.push_back(info.RSSI);
-
-    APBeacon beacon;
-    beacon.header.destinationID = info.header.sourceID;
-    beacon.header.sourceID = apID;
-    beacon.header.X = X;
-    beacon.header.Y = Y;
-    beacon.header.Z = Z;
-    beacon.Tx_Power = txPower;
-    beacon.freq = frequency;
-    beacon.protocolType = IEEEprotocolType;
-    beacon.BW = channelBW;
-
-    (outChannelChange_f(beacon));
-  }
-}
-
-
-#line 442 "ap.h"
-void compcxx_AP_9 :: inUpdateAttachedStationsParams (StationInfo &info){
-
-  if (info.header.destinationID == apID){
-    for (int i=0; i<(int)vectorOfConnectedStations.size(); i++){
-      if (info.header.sourceID == vectorOfConnectedStations.at(i)){
-        vectorOfConnectedStationsRSSIs.at(i) = info.RSSI;
-      }
-    }
-  }
-}
-
-
-#line 453 "ap.h"
-void compcxx_AP_9 :: CHselectionBylearning(trigger_t&){
-
-  int lastAction = actionSelected;
-  int num_arms = setOfactions.size();
-  int index = SearchAction(lastAction, num_arms, &setOfactions);
-
-  switch (APlearningFlag) {
-
-    case 1:{
-
-      if (flag == 0){
-        int i = rand()%num_arms;
-        actionSelected = setOfactions.at(i);
-        TimesActionIsPicked[i] = TimesActionIsPicked[i] + 1;
-
-        flag++;
-      }
-      else{
-        double epsilon = 1/sqrt(iter);
-        reward_action[index] = GetReward(lastAction, &channel_reward, &Action_Selected, &TimeSimulation, SimTime());
-        occupancy_CH[index] = GetOccupancy(lastAction, &occupanyOfAp, &Action_Selected, &TimeSimulation, SimTime());
-
-        actionSelected = setOfactions.at(Egreedy(num_arms, &reward_action, &occupancy_CH, epsilon, &TimesActionIsPicked));
-      }
-
-      for (int i=0; i<(int)CHMapToAction.size();i++){
-        int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
-        if (overlap ==1){
-          trafficLoad = trafficLoad-CH_occupancy_detected.at(i);
-          if (trafficLoad < 0.00001){
-            trafficLoad = 0;
-          }
-        }
-      }
-
-      double* selectedConfiguration = GetConfiguration(IEEEprotocolType, actionSelected);
-      channelBW = *selectedConfiguration;
-      OperatingChannel = *(selectedConfiguration+1);
-      frequency = *(selectedConfiguration+2);
-
-      if ((int)vectorOfNeighboringAPs.size() != 0){
-        for (int n=0;n<(int)vectorOfNeighboringAPs.size();n++){
-          if(trafficLoad != 0){
-
-            ApNotification RemoveLoad;
-            RemoveLoad.Load = trafficLoad;
-            RemoveLoad.ChannelNumber = CHMapToAction.at(index);
-            RemoveLoad.flag = 0;
-            RemoveLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
-            (outLoadToNeighbor_f(RemoveLoad));
-
-
-            ApNotification AddLoad;
-            AddLoad.Load = trafficLoad;
-            AddLoad.ChannelNumber = OperatingChannel;
-            AddLoad.flag = 1;
-            AddLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
-            (outLoadToNeighbor_f(AddLoad));
-          }
-        }
-      }
-
-      for (int i=0; i<(int)CHMapToAction.size();i++){
-        int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
-        if (overlap ==1){
-          trafficLoad = trafficLoad+CH_occupancy_detected.at(i);
-        }
-      }
-
-      for (int i=0;i<(int)vectorOfConnectedStations.size();i++){
-        APBeacon beacon;
-        beacon.header.destinationID = vectorOfConnectedStations.at(i);
-        beacon.header.sourceID = apID;
-        beacon.header.X = X;
-        beacon.header.Y = Y;
-        beacon.header.Z = Z;
-        beacon.Tx_Power = txPower;
-        beacon.freq = frequency;
-        beacon.protocolType = IEEEprotocolType;
-        beacon.BW = channelBW;
-        (outChannelChange_f(beacon));
-
-        Connection update;
-        update.header.sourceID = apID;
-        update.header.destinationID = vectorOfConnectedStations.at(i);
-        update.Ap_Load = trafficLoad;
-        (outAssignAirTime_f(update));
-      }
-
-      ActionChange.push_back(actionSelected);
-      TimeStamp.push_back(SimTime());
-
-      trigger_Action.Set(SimTime()+ChSelectionTime);
-      iter++;
-
-    }break;
-
-    case 2:{
-      if (flag == 0){
-        estimated_reward_action[index] = ((estimated_reward_action[index] * TimesActionIsPicked[index]) + (reward_action[index])) / (TimesActionIsPicked[index] + 2);
-        estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
-        estimated_reward_Per_action_Time[index].push_back(SimTime());
-        actionSelected = setOfactions.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_CH, &TimesActionIsPicked));
-
-        flag++;
-      }
-      else{
-        reward_action[index] = GetReward(lastAction, &channel_reward, &Action_Selected, &TimeSimulation, SimTime());
-        occupancy_CH[index] = GetOccupancy(lastAction, &occupanyOfAp, &Action_Selected, &TimeSimulation, SimTime());
-        estimated_reward_action[index] = ((estimated_reward_action[index] * TimesActionIsPicked[index]) + (reward_action[index])) / (TimesActionIsPicked[index] + 2);
-        estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
-        estimated_reward_Per_action_Time[index].push_back(SimTime());
-        actionSelected = setOfactions.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_CH, &TimesActionIsPicked));
-      }
-
-      for (int i=0; i<(int)CHMapToAction.size();i++){
-        int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
-        if (overlap ==1){
-          trafficLoad = trafficLoad-CH_occupancy_detected.at(i);
-          if (trafficLoad < 0.00001){
-            trafficLoad = 0;
-          }
-        }
-      }
-
-      double* selectedConfiguration = GetConfiguration(IEEEprotocolType, actionSelected);
-      channelBW = *selectedConfiguration;
-      OperatingChannel = *(selectedConfiguration+1);
-      frequency = *(selectedConfiguration+2);
-
-      if ((int)vectorOfNeighboringAPs.size() != 0){
-        for (int n=0;n<(int)vectorOfNeighboringAPs.size();n++){
-          if(trafficLoad != 0){
-
-            ApNotification RemoveLoad;
-            RemoveLoad.Load = trafficLoad;
-            RemoveLoad.ChannelNumber = CHMapToAction.at(index);
-            RemoveLoad.flag = 0;
-            RemoveLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
-            (outLoadToNeighbor_f(RemoveLoad));
-
-
-            ApNotification AddLoad;
-            AddLoad.Load = trafficLoad;
-            AddLoad.ChannelNumber = OperatingChannel;
-            AddLoad.flag = 1;
-            AddLoad.header.destinationID = vectorOfNeighboringAPs.at(n);
-            (outLoadToNeighbor_f(AddLoad));
-          }
-        }
-      }
-
-      for (int i=0; i<(int)CHMapToAction.size();i++){
-        int overlap = ChannelOverlappingDetector(IEEEprotocolType,OperatingChannel,CHMapToAction.at(i));
-        if (overlap ==1){
-          trafficLoad = trafficLoad+CH_occupancy_detected.at(i);
-        }
-      }
-
-      for (int i=0;i<(int)vectorOfConnectedStations.size();i++){
-        APBeacon beacon;
-        beacon.header.destinationID = vectorOfConnectedStations.at(i);
-        beacon.header.sourceID = apID;
-        beacon.header.X = X;
-        beacon.header.Y = Y;
-        beacon.header.Z = Z;
-        beacon.Tx_Power = txPower;
-        beacon.freq = frequency;
-        beacon.protocolType = IEEEprotocolType;
-        beacon.BW = channelBW;
-        (outChannelChange_f(beacon));
-
-        Connection update;
-        update.header.sourceID = apID;
-        update.header.destinationID = vectorOfConnectedStations.at(i);
-        update.Ap_Load = trafficLoad;
-        (outAssignAirTime_f(update));
-      }
-
-      ActionChange.push_back(actionSelected);
-      TimeStamp.push_back(SimTime());
-
-      trigger_Action.Set(SimTime()+ChSelectionTime);
-    }break;
-  }
-}
-
-
-#line 640 "ap.h"
-void compcxx_AP_9 :: ProgressFunct(trigger_t&){
-  printf("Progress: %f\n", (SimTime()/(double)86400)*100);
-  trigger_progress.Set(SimTime()+4320);
-}
-
-
-#line 288 "../COST/cost.h"
-
-#line 288 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_8/*<trigger_t >*/::Set(trigger_t const & data, double time)
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.time = time;
-  m_event.data = data;
-  m_event.object = this;
-  m_event.active=true;
-  m_simeng->ScheduleEvent(&m_event);
-}
-
-
-#line 300 "../COST/cost.h"
-
-#line 300 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_8/*<trigger_t >*/::Set(double time)
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.time = time;
-  m_event.object = this;
-  m_event.active=true;
-  m_simeng->ScheduleEvent(&m_event);
-}
-
-
-#line 311 "../COST/cost.h"
-
-#line 311 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_8/*<trigger_t >*/::Cancel()
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.active = false;
-}
-
-
-#line 319 "../COST/cost.h"
-
-#line 319 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_8/*<trigger_t >*/::activate(CostEvent*e)
-{
-  assert(e==&m_event);
-  m_event.active=false;
-  (p_compcxx_parent->APselectionBylearning(m_event.data));
+#line 71 "station.h"
+void compcxx_STA_6::Stop(){
 }
 
 
 
 
-#line 288 "../COST/cost.h"
-
-#line 288 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_5/*<trigger_t >*/::Set(trigger_t const & data, double time)
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.time = time;
-  m_event.data = data;
-  m_event.object = this;
-  m_event.active=true;
-  m_simeng->ScheduleEvent(&m_event);
-}
 
 
-#line 300 "../COST/cost.h"
-
-#line 300 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_5/*<trigger_t >*/::Set(double time)
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.time = time;
-  m_event.object = this;
-  m_event.active=true;
-  m_simeng->ScheduleEvent(&m_event);
-}
 
 
-#line 311 "../COST/cost.h"
+#line 80 "station.h"
+void compcxx_STA_6::Initialization(){
 
-#line 311 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_5/*<trigger_t >*/::Cancel()
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.active = false;
-}
-
-
-#line 319 "../COST/cost.h"
-
-#line 319 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_5/*<trigger_t >*/::activate(CostEvent*e)
-{
-  assert(e==&m_event);
-  m_event.active=false;
-  (p_compcxx_parent->ProcessBeacons(m_event.data));
+	if (capabilities.Multilink){
+		int intSz = maxIntNum;
+		for (int i=0; i<intSz; i++){
+			STAInterface interface;
+			interface.id = i;
+			InterfaceContainer.push_back(interface);
+		}
+	}
+	else{
+		STAInterface interface;
+		interface.id = 0;
+		interface.active = true;
+		InterfaceContainer.push_back(interface);
+	}
+	NotifyAP("PROBE_REQ", nullptr);
+	NotifyAP("CONFIG_REQ", nullptr);
 }
 
 
 
 
-#line 288 "../COST/cost.h"
-
-#line 288 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_6/*<trigger_t >*/::Set(trigger_t const & data, double time)
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.time = time;
-  m_event.data = data;
-  m_event.object = this;
-  m_event.active=true;
-  m_simeng->ScheduleEvent(&m_event);
-}
 
 
-#line 300 "../COST/cost.h"
-
-#line 300 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_6/*<trigger_t >*/::Set(double time)
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.time = time;
-  m_event.object = this;
-  m_event.active=true;
-  m_simeng->ScheduleEvent(&m_event);
-}
 
 
-#line 311 "../COST/cost.h"
+#line 106 "station.h"
+void compcxx_STA_6::NotifyAP(std::string type, std::vector<double> *v){
 
-#line 311 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_6/*<trigger_t >*/::Cancel()
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.active = false;
-}
-
-
-#line 319 "../COST/cost.h"
-
-#line 319 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_6/*<trigger_t >*/::activate(CostEvent*e)
-{
-  assert(e==&m_event);
-  m_event.active=false;
-  (p_compcxx_parent->SendRequestedAT(m_event.data));
+	if (type.compare("PROBE_REQ") == 0){
+		Notification notification ("PROBE_REQ", staID, -1);
+		(outCtrlAP_f(notification));
+	}
+	else if (type.compare("CONFIG_REQ") == 0){
+		Notification notification ("CONFIG_REQ", staID, servingAP);
+		(outCtrlAP_f(notification));
+	}
+	else if (type.compare("MLO_SETUP_REQ") == 0){
+		Notification notification ("MLO_SETUP_REQ", staID, servingAP);
+		notification.setLinkQuality(*v);
+		(outCtrlAP_f(notification));
+	}
+	else if (type.compare("UPDATE_MLO") == 0){
+		Notification notification ("UPDATE_MLO", staID, servingAP);
+		notification.setLinkQuality(*v);
+		(outCtrlAP_f(notification));
+	}
 }
 
 
 
 
-#line 288 "../COST/cost.h"
 
-#line 288 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_7/*<trigger_t >*/::Set(trigger_t const & data, double time)
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.time = time;
-  m_event.data = data;
-  m_event.object = this;
-  m_event.active=true;
-  m_simeng->ScheduleEvent(&m_event);
+
+
+
+#line 134 "station.h"
+void compcxx_STA_6::inCrtlAP(Notification &n){
+
+	if (n.getDestination() == staID){
+		std::string type = n.getType();
+		if (type.compare("PROBE_RESP") == 0){
+			Queue.push_back(n);
+			if (!WaitProbes.Active()){
+				WaitProbes.Set(SimTime());
+			}
+		}
+		else if (type.compare("CONFIG_RESP") == 0){
+			if (!capabilities.Multilink){
+				std::vector<double> fc = n.getFc();
+				InterfaceContainer.at(0).fc = fc.at(0);
+			}
+			else{
+				DoMLOSetup(n);
+			}
+		}
+		else if (type.compare("MLO_SETUP_RESP") == 0){
+
+			for (int i=0; i<(int)InterfaceContainer.size(); i++){
+				InterfaceContainer.at(i).active = false;
+			}
+
+			std::vector<double> LinkFc = n.getFc();
+			for (int i=0; i<(int)LinkFc.size(); i++){
+				std::string band = GetBand(LinkFc.at(i));
+				if (band.compare("2_4GHz") == 0){
+					InterfaceContainer.at(i).fc = LinkFc.at(i);
+					InterfaceContainer.at(i).active = true;
+				}
+				else if (band.compare("5GHz") == 0){
+					InterfaceContainer.at(i).fc = LinkFc.at(i);
+					InterfaceContainer.at(i).active = true;
+				}
+				else if (band.compare("6GHz") == 0){
+					InterfaceContainer.at(i).fc = LinkFc.at(i);
+					InterfaceContainer.at(i).active = true;
+				}
+			}
+		}
+		else if(type.compare("CHANNEL_SWITCH_STA") == 0){
+
+			for (int i=0; i<(int)InterfaceContainer.size(); i++){
+				InterfaceContainer.at(i).active = false;
+			}
+			UpdateInterfaces(n);
+		}
+		else if ((type.compare("SAT_UPDATE") == 0) && (state.compare("ACTIVE") == 0)){
+
+			std::vector<double> satisfaction = n.getSat();
+			flow.setSat(satisfaction);
+
+			std::vector<double> Fc = n.getFc();
+			std::vector<double> sat_evolution (InterfaceContainer.size(), 0.0);
+			std::vector<double> sim_time (InterfaceContainer.size(), 0.0);
+
+			for (int j=0; j<(int)InterfaceContainer.size(); j++){
+				if ((satisfaction.at(j) != -1) && (InterfaceContainer.at(j).active)){
+					sat_evolution.at(j) = satisfaction.at(j);
+					sim_time.at(j) = SimTime();
+					break;
+				}
+			}
+			statistics.SatEvo.push_back(sat_evolution);
+			statistics.SimT.push_back(sim_time);
+		}
+		else if(type.compare("FLOW_END") == 0){
+			state = "IDLE";
+			CalculateStats();
+		}
+	}
+	else{
+		std::string type = n.getType();
+		if ((type.compare("SAT_UPDATE") == 0) && (state.compare("ACTIVE") == 0)){
+
+			std::vector<double> satisfaction = n.getSat();
+			flow.setSat(satisfaction);
+
+			std::vector<double> Fc = n.getFc();
+			std::vector<double> sat_evolution (InterfaceContainer.size(), 0.0);
+			std::vector<double> sim_time (InterfaceContainer.size(), 0.0);
+
+			for (int j=0; j<(int)InterfaceContainer.size(); j++){
+				if ((satisfaction.at(j) != -1) && (InterfaceContainer.at(j).active)){
+					sat_evolution.at(j) = satisfaction.at(j);
+					sim_time.at(j) = SimTime();
+					break;
+				}
+			}
+			statistics.SatEvo.push_back(sat_evolution);
+			statistics.SimT.push_back(sim_time);
+		}
+	}
 }
 
 
-#line 300 "../COST/cost.h"
-
-#line 300 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_7/*<trigger_t >*/::Set(double time)
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.time = time;
-  m_event.object = this;
-  m_event.active=true;
-  m_simeng->ScheduleEvent(&m_event);
-}
 
 
-#line 311 "../COST/cost.h"
-
-#line 311 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_7/*<trigger_t >*/::Cancel()
-{
-  if(m_event.active)
-    m_simeng->CancelEvent(&m_event);
-  m_event.active = false;
-}
 
 
-#line 319 "../COST/cost.h"
 
-#line 319 "../COST/cost.h"
-/*template <class T>
-*/void compcxx_Timer_7/*<trigger_t >*/::activate(CostEvent*e)
-{
-  assert(e==&m_event);
-  m_event.active=false;
-  (p_compcxx_parent->SendTxTimeFinished(m_event.data));
+
+#line 237 "station.h"
+void compcxx_STA_6::inDataAP(Flow &f){
+	if (f.getDestination() == staID){
+		flow = f;
+		state = "ACTIVE";
+	}
 }
 
 
 
 
-#line 94 "station.h"
 
-#line 95 "station.h"
 
-#line 96 "station.h"
 
-#line 97 "station.h"
 
-#line 101 "station.h"
-compcxx_Station_10 :: compcxx_Station_10(){
-  trigger_ProcessBeacons.p_compcxx_parent=this /*connect trigger_ProcessBeacons.to_component,*/;
-  trigger_SendRequestedAT.p_compcxx_parent=this /*connect trigger_SendRequestedAT.to_component,*/;
-  trigger_TxTimeFinished.p_compcxx_parent=this /*connect trigger_TxTimeFinished.to_component,*/;
-  trigger_Action.p_compcxx_parent=this /*connect trigger_Action.to_component,*/;
+#line 250 "station.h"
+void compcxx_STA_6::Discovery(trigger_t&){
+	while (Queue.size() > 0) {
+		Notification n = Queue.front();
+		Position AP_coord = n.getPosition();
+		std::vector<double> fc = n.getFc();
+
+		double RSSI = CalculateRSSI(configuration.TxPower, fc.at(0), AP_coord.x, AP_coord.y, AP_coord.z, coordinates.x, coordinates.y, coordinates.z);
+		if (RSSI >= RSSIth){
+			WifiAP ap;
+			ap.id = n.getSender();
+			ap.coord = AP_coord;
+			InRangeAPs.push_back(ap);
+		}
+		Queue.pop_front();
+	}
 }
 
 
-#line 108 "station.h"
-void compcxx_Station_10 :: Setup(){
 
+
+
+
+
+
+#line 273 "station.h"
+void compcxx_STA_6::DoMLOSetup(Notification &n){
+
+	Position AP_coord = n.getPosition();
+	std::vector<double> fc = n.getFc();
+	std::vector<double> linkQ;
+
+	for (int i=0; i<(int)fc.size(); i++){
+		double RSSI = CalculateRSSI(configuration.TxPower, fc.at(i), AP_coord.x, AP_coord.y, AP_coord.z, coordinates.x, coordinates.y, coordinates.z);
+		linkQ.push_back(RSSI);
+	}
+
+	NotifyAP("MLO_SETUP_REQ", &linkQ);
 }
 
 
-#line 112 "station.h"
-void compcxx_Station_10 :: Start(){
-  iter = 1;
-  flag = 0;
-  TimeSizeF = 0;
-  TimeSizeS = 0;
+
+
+
+
+
+
+#line 293 "station.h"
+void compcxx_STA_6::UpdateInterfaces(Notification &n){
+
+	if (!capabilities.Multilink){
+		std::vector<double> fc = n.getFc();
+		InterfaceContainer.at(0).active = true;
+		InterfaceContainer.at(0).fc = fc.at(0);
+	}
+	else{
+		for (int i=0; i<(int)InRangeAPs.size(); i++){
+			if (servingAP == InRangeAPs.at(i).id){
+				std::vector<double> fc = n.getFc();
+				std::vector<double> linkQ;
+
+				for (int j=0; j<(int)fc.size(); j++){
+					double RSSI = CalculateRSSI(configuration.TxPower, fc.at(j), InRangeAPs.at(i).coord.x, InRangeAPs.at(i).coord.y, InRangeAPs.at(i).coord.z, coordinates.x, coordinates.y, coordinates.z);
+					linkQ.push_back(RSSI);
+				}
+				NotifyAP("UPDATE_MLO", &linkQ);
+				break;
+			}
+		}
+	}
 }
 
 
-#line 119 "station.h"
-void compcxx_Station_10 :: Stop(){
 
-  int TimeWrap = 900;
-  double pos = runTimeSim/TimeWrap;
-  int step = 0;
-  int count = 0;
-  int endVal = TimeWrap-1;
-  double tmp_mean = 0;
-  double m = 0;
 
-  for (int k=0; k<pos; k++){
-    for (int init=0; init<(int)timeSim2.size(); init++){
-      if (step <= timeSim2.at(init) && timeSim2.at(init) < endVal){
-        tmp_mean = tmp_mean + Satisfaction.at(init);
-        count = count + 1;
-      }
-    }
-    m = tmp_mean/count;
 
-    mSat.push_back(m);
 
-    tmp_mean = 0;
-    m = 0;
-    count = 0;
-    step = step+TimeWrap;
-    endVal = endVal+TimeWrap;
-  }
+
+
+#line 323 "station.h"
+void compcxx_STA_6::CalculateStats(){
+
+	double satisfaction = flow.getSatisfaction();
+	statistics.AvgSatPerFlow.push_back(satisfaction);
+	statistics.AvgThPerFlow.push_back(satisfaction*flow.getLength());
 }
 
 
-#line 148 "station.h"
-void compcxx_Station_10 :: inReceivedBeacon(APBeacon &b){
-
-  detectedWLANs.push_back(b);
-  trigger_ProcessBeacons.Set(SimTime()+0.001);
-}
-
-
-#line 154 "station.h"
-void compcxx_Station_10 :: ProcessBeacons(trigger_t&){
-
-  StationInfo info;
-
-  std::vector<double>RSSIvalueUL;
-  std::vector<double>DLDataRates;
-  std::vector<double>ULDataRates;
-  std::vector<double>InRangeAPsRSSI;
-
-  if (detectedWLANs.size() !=0){
-
-    while (detectedWLANs.size() > 0) {
-      double tmpRSSIvalueDL, tmpRSSIvalueUL, DL_r, UL_r;
-
-      APBeacon b = detectedWLANs.front();
-      tmpRSSIvalueUL = txPower - PropL(X, Y, Z, b.header.X, b.header.Y, b.header.Z, b.freq);
-
-      if (tmpRSSIvalueUL> -80){
-
-        tmpRSSIvalueDL = b.Tx_Power - PropL(X, Y, Z, b.header.X, b.header.Y, b.header.Z, b.freq);
-
-        InRangeAPs.push_back(b.header.sourceID);
-        InRangeAPsRSSI.push_back(tmpRSSIvalueDL);
-        RSSIvalueUL.push_back(tmpRSSIvalueUL);
-
-        DL_r = SetDataRate(tmpRSSIvalueDL, b.protocolType, b.BW);
-        UL_r = SetDataRate(tmpRSSIvalueUL, b.protocolType, b.BW);
-
-        DLDataRates.push_back(DL_r);
-        ULDataRates.push_back(UL_r);
-
-        if (tmpRSSIvalueUL >= -75)
-        {
-          CandidateAPs.push_back(b.header.sourceID);
-        }
-      }
-      detectedWLANs.pop_front();
-    }
-  }
-
-  switch (stationLearningFlag) {
-    case 0:{ 
-        double RSSI_UL;
-
-        RSSI = -100;
-        servingAP = 0;
-
-        for (int i=0; i<(int)InRangeAPsRSSI.size(); i++){
-          if (RSSI<=InRangeAPsRSSI.at(i)){
-            servingAP = InRangeAPs.at(i);
-            RSSI = InRangeAPsRSSI.at(i);
-            RSSI_UL = RSSIvalueUL.at(i);
-            DLDataRate = DLDataRates.at(i);
-            ULDataRate = ULDataRates.at(i);
-          }
-        }
-
-        info.header.sourceID = staID;
-        info.header.destinationID = servingAP;
-        info.RSSI = RSSI_UL;
-
-        (outSetClientAssociation_f(info));
-        trigger_SendRequestedAT.Set(SimTime()+Exponential(flowActivation));
-
-      }break;
-
-    case 1:{ 
-
-        double RSSI_UL;
-        int size = (int)CandidateAPs.size();
-
-        RSSI = -100;
-        servingAP = 0;
-
-        reward_action.assign(size,0.0);
-        occupancy_AP.assign(size,0.0);
-        Times_ActionSelected.assign(size,0.0);
-
-        for (int i=0; i<(int)InRangeAPsRSSI.size(); i++){
-          if (RSSI<=InRangeAPsRSSI.at(i)){
-            servingAP = InRangeAPs.at(i);
-            RSSI = InRangeAPsRSSI.at(i);
-            RSSI_UL = RSSIvalueUL.at(i);
-            DLDataRate = DLDataRates.at(i);
-            ULDataRate = ULDataRates.at(i);
-          }
-        }
-
-        info.header.sourceID = staID;
-        info.header.destinationID = servingAP;
-        info.RSSI = RSSI_UL;
-        (outSetClientAssociation_f(info));
-
-        if (size > 1){
-          trigger_Action.Set(SimTime()+offsetSTA);
-        }
-        trigger_SendRequestedAT.Set(SimTime()+Exponential(flowActivation));
-
-    }break;
-
-    case 2:{ 
-
-        double RSSI_UL;
-        int size = (int)CandidateAPs.size();
-
-        RSSI = -100;
-        servingAP = 0;
-
-        reward_action.assign(size,0.0);
-        occupancy_AP.assign(size,0.0);
-        estimated_reward_action.assign(size,0.0);
-        Times_ActionSelected.assign(size,0.0);
-        estimated_reward_Per_action.resize(size);
-        estimated_reward_Per_action_Time.resize(size);
-
-        for (int i=0; i<(int)InRangeAPsRSSI.size(); i++){
-          if (RSSI<=InRangeAPsRSSI.at(i)){
-            servingAP = InRangeAPs.at(i);
-            RSSI = InRangeAPsRSSI.at(i);
-            RSSI_UL = RSSIvalueUL.at(i);
-            DLDataRate = DLDataRates.at(i);
-            ULDataRate = ULDataRates.at(i);
-          }
-        }
-
-        info.header.sourceID = staID;
-        info.header.destinationID = servingAP;
-        info.RSSI = RSSI_UL;
-        (outSetClientAssociation_f(info));
-
-        if ((size > 1)&&(userType == 2)){
-          trigger_Action.Set(SimTime()+offsetSTA);
-        }
-
-        trigger_SendRequestedAT.Set(SimTime()+Exponential(flowActivation));
-
-    }break;
-  }
-
-  ActionChange.push_back(servingAP);
-  TimeStamp.push_back(SimTime());
-
-}
-
-
-#line 298 "station.h"
-void compcxx_Station_10 :: SendRequestedAT(trigger_t&){
-
-  double TimeMPDU, Tack, Trts, Tcts, LDBPS_DL, LDBPS_UL;
-
-  Connection ConnRequest;
-
-  LDBPS_DL = (DLDataRate*pow(10,6))*Tofdm;
-  LDBPS_UL = (ULDataRate*pow(10,6))*Tofdm;
-
-  FlowType = 0; 
-
-  requestedBW = Random(medBW) + 1;
-
-  switch (FlowType) {
-    case 0:{ 
-
-      TimeMPDU = TphyHE + std::ceil(((Lsf+Lmac+frameLength+Ltb)/(LDBPS_DL)))*Tofdm;
-      Tack = TphyL + std::ceil(((Lsf+Lack+Ltb)/(legacyRate)))*Tofdm_leg;
-      Trts = TphyL + std::ceil(((Lsf+Lrts+Ltb)/(legacyRate)))*Tofdm_leg;
-      Tcts = TphyL + std::ceil(((Lsf+Lcts+Ltb)/(legacyRate)))*Tofdm_leg;
-
-      AirTimeRequired = (std::ceil((requestedBW*pow(10,6)/frameLength))*(1/(1-Pe)))*(((CW/2)*Tempty)+(Trts+Tsifs+Tcts+Tsifs+TimeMPDU+Tsifs+Tack+Tdifs+Tempty));
-
-      ConnRequest.header.sourceID = staID;
-      ConnRequest.header.destinationID = servingAP;
-      ConnRequest.LoadByStation = AirTimeRequired*100;
-      break;
-    }
-    case 1:{ 
-      TimeMPDU = TphyHE + std::ceil(((Lsf+Lmac+frameLength+Ltb)/(LDBPS_UL)))*Tofdm;
-      Tack = TphyL + std::ceil(((Lsf+Lack+Ltb)/(legacyRate)))*Tofdm_leg;
-      Trts = TphyL + std::ceil(((Lsf+Lrts+Ltb)/(legacyRate)))*Tofdm_leg;
-      Tcts = TphyL + std::ceil(((Lsf+Lcts+Ltb)/(legacyRate)))*Tofdm_leg;
-
-      AirTimeRequired = (std::ceil((requestedBW*pow(10,6)/frameLength))*(1/(1-Pe)))*(((CW/2)*Tempty)+(Trts+Tsifs+Tcts+Tsifs+TimeMPDU+Tsifs+Tack+Tdifs+Tempty));
-
-      ConnRequest.header.sourceID = staID;
-      ConnRequest.header.destinationID = servingAP;
-      ConnRequest.LoadByStation = AirTimeRequired*100;
-      break;
-    }
-  }
-
-  startTX = SimTime();
-  TimeSizeS = (int)timeSim2.size();
-
-  (outRequestAirTime_f(ConnRequest));
-
-  AirTimeEvo.push_back(AirTimeRequired);
-  timeSim.push_back(SimTime());
-
-  trigger_TxTimeFinished.Set(SimTime()+Exponential(flowDuration));
-}
-
-
-#line 352 "station.h"
-void compcxx_Station_10 :: inAssignedAirTime(Connection &response){
-
-  if (staID == response.header.destinationID){
-    double MaxLoad;
-
-    if (0 < AirTimeRequired){
-      MaxLoad = 100;
-      if (response.Ap_Load < 100){
-        CandidateAPsTrafficLoad.push_back(response.Ap_Load);
-        Satisfaction.push_back((double)1);
-      }
-      else{
-        CandidateAPsTrafficLoad.push_back((double)100);
-        Satisfaction.push_back(((std::min(MaxLoad,response.Ap_Load))/(response.Ap_Load)));
-      }
-      Action_Selected.push_back(servingAP);
-      timeSim2.push_back(SimTime());
-    }
-  }
-}
-
-
-#line 373 "station.h"
-void compcxx_Station_10 :: SendTxTimeFinished(trigger_t&){
-
-  finishTX = SimTime();
-  TimeSizeF = (int)timeSim2.size();
-  int size = TimeSizeF-TimeSizeS;
-  double throughput = GetData(FlowType, TimeSizeS, size, &Satisfaction, requestedBW);
-
-  Throughput.push_back(throughput);
-  bits_Sent = bits_Sent + (GetData(FlowType, TimeSizeS, size, &Satisfaction, requestedBW)*(finishTX-startTX));
-  totalBits = totalBits + (requestedBW*(finishTX-startTX));
-  
-
-  Connection ConnFinish;
-  ConnFinish.header.destinationID = servingAP;
-  ConnFinish.header.sourceID = staID;
-  ConnFinish.LoadByStation = AirTimeRequired*100;
-
-  (outFlowEnded_f(ConnFinish));
-
-  AirTimeRequired = 0;
-  AirTimeEvo.push_back(AirTimeRequired);
-  timeSim.push_back(SimTime());
-
-  trigger_SendRequestedAT.Set(SimTime()+Exponential(flowActivation));
-}
-
-
-#line 399 "station.h"
-void compcxx_Station_10 :: inUpdateStationParameters(APBeacon &b){
-
-  if (staID == b.header.destinationID){
-    double RSSIvalueUL;
-    StationInfo info;
-
-    RSSI = b.Tx_Power - PropL(X,Y,Z,b.header.X,b.header.Y,b.header.Z,b.freq);
-    RSSIvalueUL = txPower - PropL(X,Y,Z,b.header.X,b.header.Y,b.header.Z,b.freq);
-    frequency = b.freq;
-    IEEE_protocol = b.protocolType;
-    ChBW = b.BW;
-
-    DLDataRate = SetDataRate(RSSI, IEEE_protocol, ChBW);
-    ULDataRate = SetDataRate(RSSIvalueUL, IEEE_protocol, ChBW);
-
-    info.header.sourceID = staID;
-    info.header.destinationID = b.header.sourceID;
-    info.RSSI = RSSI;
-
-    (outUpdateAttachedStationsParams_f(info));
-  }
-}
-
-
-#line 422 "station.h"
-void compcxx_Station_10 :: APselectionBylearning(trigger_t&){
-
-  if (trigger_TxTimeFinished.Active() == 0){
-
-    int oldAP = servingAP;
-    int num_arms = CandidateAPs.size();
-    int index = SearchAction(servingAP, num_arms, &CandidateAPs);
-
-    switch (stationLearningFlag) {
-
-      case 1:{  
-
-        if (flag == 0){
-          int i = rand()%num_arms;
-          servingAP = CandidateAPs.at(i);
-          Times_ActionSelected[i] = Times_ActionSelected[i] + 1;
-
-          flag++;
-        }
-        else{
-          double epsilon = 1/sqrt(iter);
-          reward_action[index] = GetReward(servingAP, &Satisfaction, &Action_Selected, &timeSim2, SimTime());
-          occupancy_AP[index] = GetOccupancy(servingAP, &CandidateAPsTrafficLoad, &Action_Selected, &timeSim2, SimTime());
-          servingAP = CandidateAPs.at(Egreedy(num_arms, &reward_action, &occupancy_AP, epsilon, &Times_ActionSelected));
-        }
-
-        StationInfo hello;
-        hello.header.sourceID = staID;
-        hello.header.destinationID = servingAP;
-        hello.RSSI = 0;
-
-        if (oldAP != servingAP){
-          (outUpdateConnection_f(hello, oldAP));
-        }
-
-        ActionChange.push_back(servingAP);
-        TimeStamp.push_back(SimTime());
-
-        trigger_Action.Set(SimTime()+SearchBestAP);
-        iter++;
-
-      }break;
-
-      case 2:{  
-
-        if (flag == 0){
-          estimated_reward_action[index] = ((estimated_reward_action[index] * Times_ActionSelected[index]) + (reward_action[index]))/ (Times_ActionSelected[index] + 2);
-          estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
-          estimated_reward_Per_action_Time[index].push_back(SimTime());
-          servingAP = CandidateAPs.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_AP, &Times_ActionSelected));
-          flag++;
-        }
-        else{
-          reward_action[index] = GetReward(servingAP, &Satisfaction, &Action_Selected, &timeSim2, SimTime());
-          occupancy_AP[index] = (GetOccupancy(servingAP, &CandidateAPsTrafficLoad, &Action_Selected, &timeSim2, SimTime()))/100;
-          estimated_reward_action[index] = ((estimated_reward_action[index] * Times_ActionSelected[index]) + (reward_action[index]))/ (Times_ActionSelected[index] + 2);
-          estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
-          estimated_reward_Per_action_Time[index].push_back(SimTime());
-          servingAP = CandidateAPs.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_AP, &Times_ActionSelected));
-        }
-
-        StationInfo hello;
-        hello.header.sourceID = staID;
-        hello.header.destinationID = servingAP;
-        hello.RSSI = 0;
-
-        if (oldAP != servingAP){
-          (outUpdateConnection_f(hello, oldAP));
-        }
-
-        ActionChange.push_back(servingAP);
-        TimeStamp.push_back(SimTime());
-
-        trigger_Action.Set(SimTime()+SearchBestAP);
-      }break;
-    }
-  }
-
-  else{
-    double t = trigger_TxTimeFinished.GetTime() - SimTime() + 0.001;
-    trigger_Action.Cancel();
-    trigger_Action.Set(SimTime()+t);
-  }
-}
-
-
-#line 45 "neko.cc"
-void compcxx_Neko_11 :: Setup(){
-
-  if (rnd == 1){
-    GenerateRandom();
-  }
-  else{
-    LoadScenario();
-  }
-
-  for (int j=0; j<numOfStations; j++){
-    for (int i=0; i<numOfAPs; i++){
-
-        STA_container[j].outSetClientAssociation_f.Connect(APoint_container[i],(compcxx_component::Station_outSetClientAssociation_f_t)&compcxx_AP_9::inSetClientAssociation) /*connect STA_container[j].outSetClientAssociation,APoint_container[i].inSetClientAssociation*/;
-        STA_container[j].outRequestAirTime_f.Connect(APoint_container[i],(compcxx_component::Station_outRequestAirTime_f_t)&compcxx_AP_9::inRequestedAirTime) /*connect STA_container[j].outRequestAirTime,APoint_container[i].inRequestedAirTime*/;
-        STA_container[j].outFlowEnded_f.Connect(APoint_container[i],(compcxx_component::Station_outFlowEnded_f_t)&compcxx_AP_9::inTxTimeFinished) /*connect STA_container[j].outFlowEnded,APoint_container[i].inTxTimeFinished*/;
-        STA_container[j].outUpdateConnection_f.Connect(APoint_container[i],(compcxx_component::Station_outUpdateConnection_f_t)&compcxx_AP_9::inUpdateConnection) /*connect STA_container[j].outUpdateConnection,APoint_container[i].inUpdateConnection*/;
-        STA_container[j].outUpdateAttachedStationsParams_f.Connect(APoint_container[i],(compcxx_component::Station_outUpdateAttachedStationsParams_f_t)&compcxx_AP_9::inUpdateAttachedStationsParams) /*connect STA_container[j].outUpdateAttachedStationsParams,APoint_container[i].inUpdateAttachedStationsParams*/;
-
-        APoint_container[i].outSendBeaconToNodes_f.Connect(STA_container[j],(compcxx_component::AP_outSendBeaconToNodes_f_t)&compcxx_Station_10::inReceivedBeacon) /*connect APoint_container[i].outSendBeaconToNodes,STA_container[j].inReceivedBeacon*/;
-        APoint_container[i].outAssignAirTime_f.Connect(STA_container[j],(compcxx_component::AP_outAssignAirTime_f_t)&compcxx_Station_10::inAssignedAirTime) /*connect APoint_container[i].outAssignAirTime,STA_container[j].inAssignedAirTime*/;
-        APoint_container[i].outChannelChange_f.Connect(STA_container[j],(compcxx_component::AP_outChannelChange_f_t)&compcxx_Station_10::inUpdateStationParameters) /*connect APoint_container[i].outChannelChange,STA_container[j].inUpdateStationParameters*/;
-    }
-  }
-
-  for (int i=0;i<numOfAPs;i++){
-    for (int j=0; j<numOfAPs; j++){
-      if (APoint_container[i].apID != APoint_container[j].apID){
-        APoint_container[i].outLoadToNeighbor_f.Connect(APoint_container[j],(compcxx_component::AP_outLoadToNeighbor_f_t)&compcxx_AP_9::inLoadFromNeighbor) /*connect APoint_container[i].outLoadToNeighbor,APoint_container[j].inLoadFromNeighbor*/;
-        APoint_container[i].outSetNeighbors_f.Connect(APoint_container[j],(compcxx_component::AP_outSetNeighbors_f_t)&compcxx_AP_9::inSetNeighbors) /*connect APoint_container[i].outSetNeighbors,APoint_container[j].inSetNeighbors*/;
-      }
-    }
-  }
-}
-
-
-#line 79 "neko.cc"
-void compcxx_Neko_11 :: Start(){
-
-  
+#line 54 "neko.cc"
+
+#line 57 "neko.cc"
+void compcxx_Neko_9 :: Setup(){
+
+	if (rnd){
+		GenerateRandom();
+	}
+
+	for (int i=0; i<(int)APContainer.size(); i++){
+		for (int j=0; j<(int)STAContainer.size(); j++){
+			APContainer[i].outCtrlSTA_f.Connect(STAContainer[j],(compcxx_component::AP_outCtrlSTA_f_t)&compcxx_STA_6::inCrtlAP) /*connect APContainer[i].outCtrlSTA,STAContainer[j].inCrtlAP*/;
+			APContainer[i].outDataSTA_f.Connect(STAContainer[j],(compcxx_component::AP_outDataSTA_f_t)&compcxx_STA_6::inDataAP) /*connect APContainer[i].outDataSTA,STAContainer[j].inDataAP*/;
+			STAContainer[j].outCtrlAP_f.Connect(APContainer[i],(compcxx_component::STA_outCtrlAP_f_t)&compcxx_AP_5::inCtrlSTA) /*connect STAContainer[j].outCtrlAP,APContainer[i].inCtrlSTA*/;
+		}
+
+		for (int j=0; j<(int)APContainer.size(); j++){
+			if (APContainer[i].apID != APContainer[j].apID){
+				APContainer[i].outCtrlAP_f.Connect(APContainer[j],(compcxx_component::AP_outCtrlAP_f_t)&compcxx_AP_5::inCtrlAP) /*connect APContainer[i].outCtrlAP, APContainer[j].inCtrlAP*/;
+			}
+		}
+		for (int j=0; j<(int)AppContainer.size();j++){
+			APContainer[i].outCtrlApp_f.Connect(AppContainer[j],(compcxx_component::AP_outCtrlApp_f_t)&compcxx_Application_7::inCtrlAP) /*connect APContainer[i].outCtrlApp,AppContainer[j].inCtrlAP*/;
+			AppContainer[j].outCtrlAP_f.Connect(APContainer[i],(compcxx_component::Application_outCtrlAP_f_t)&compcxx_AP_5::inCtrlApp) /*connect AppContainer[j].outCtrlAP,APContainer[i].inCtrlApp*/;
+		}
+	}
+	Progress.p_compcxx_parent=this /*connect Progress.to_component,*/;
+	Progress.Set(SimTime());
 }
 
 
 #line 84 "neko.cc"
-void compcxx_Neko_11 :: Stop(){
+void compcxx_Neko_9 :: Start(){
 
-  FILE* pFileSTATS = fopen("../Output/STATS.txt","a");
-  float tmpSat, tmpTh, tmpDRatio, simSat, simTh, simDRatio;
-  std::vector<double> mean_Satisfaction;
-  double m_val = 0;
-
-  for (int i=0; i<(int)STA_container[0].mSat.size(); i++){
-    for (int j=0; j<numOfStations; j++){
-      m_val += STA_container[j].mSat.at(i);
-    }
-
-    mean_Satisfaction.push_back(m_val/numOfStations);
-    m_val = 0;
-  }
-
-  simTh = 0;
-  simDRatio = 0;
-  simSat = 0;
-
-  tmpSat = 0;
-  tmpTh = 0;
-  tmpDRatio = 0;
-
-  for (int i=0; i<(int)mean_Satisfaction.size(); i++){
-    tmpSat += mean_Satisfaction.at(i);
-  }
-
-  simSat = tmpSat/(int)mean_Satisfaction.size();
-
-  for (int i=0; i<numOfStations; i++){
-    tmpTh += std::accumulate(STA_container[i].Throughput.begin(),STA_container[i].Throughput.end(), 0.0)/(int)STA_container[i].Throughput.size();
-    tmpDRatio += 1-(STA_container[i].bits_Sent/STA_container[i].totalBits);
-  }
-
-  simTh = tmpTh;
-  simDRatio = tmpDRatio/numOfStations;
-  printf("Th: %f\n", simTh);
-  fprintf(pFileSTATS, "%i; %f; %f; %f\n", seed, simSat, simTh, (simDRatio*100));
-
-  fclose(pFileSTATS);
+	
 }
 
 
-#line 127 "neko.cc"
-void compcxx_Neko_11 :: GenerateRandom(){
-
-  int Xaxis = 30;
-  int Yaxis = 30;
-  int Zaxis = 2;
-  int index = 0;
-  int stationsPerAP = 15;
-
-  numOfAPs = 20;
-  numOfStations = numOfAPs*stationsPerAP;
-
-  APoint_container.SetSize(numOfAPs);
-  STA_container.SetSize(numOfStations);
-
-  int user = 0;
-
-  for (int i=0; i<numOfAPs; i++){
-    APoint_container[i].apID = i;
-    APoint_container[i].X = ((double)rand() / RAND_MAX) * Xaxis;
-    APoint_container[i].Y = ((double)rand() / RAND_MAX) * Yaxis;
-    APoint_container[i].Z = ((double)rand() / RAND_MAX) * Zaxis;
-    APoint_container[i].txPower = 15;
-    APoint_container[i].CCA = -80;
-    APoint_container[i].actionSelected = rand()%3;
-    APoint_container[i].IEEEprotocolType = 2;
-    APoint_container[i].trafficLoad = 0;
+#line 89 "neko.cc"
+void compcxx_Neko_9 :: Stop(){
+	GenerateResultReport();
+}
 
 
-    for (int j=0; j<stationsPerAP; j++){
-      int k = 0;
-      while (k<1){
-        double tmpX = ((double)rand() / RAND_MAX) * Xaxis;
-        double tmpY = ((double)rand() / RAND_MAX) * Yaxis;
-        double tmpZ = ((double)rand() / RAND_MAX) * Zaxis;
+#line 93 "neko.cc"
+void compcxx_Neko_9 :: GenerateRandom(){
 
-        float propL = PropL(tmpX,tmpY,tmpZ,APoint_container[i].X,APoint_container[i].Y,APoint_container[i].Z, 5.32);
-        float RSSI = 15-propL;
+	std::default_random_engine generator(rand());
+	bool position;
+	double Xaxis = 40;
+	double Yaxis = 30;
+	int numOfAPs = 3;
+	int stationsPerAP = 25;
+	std::vector<int> stations(numOfAPs,0.0);
 
-        if ((-80 <= RSSI) && (RSSI < -45)){
-          STA_container[index].staID = index;
-          STA_container[index].X = tmpX;
-          STA_container[index].Y = tmpY;
-          STA_container[index].Z = tmpZ;
-          STA_container[index].txPower = 15;
+	int numOfStations = 0;
+	std::uniform_int_distribution<int> UStas(15, stationsPerAP);
+	for (int i=0; i<(int)stations.size(); i++){
+		stations.at(i) = UStas(generator);
+		numOfStations += stations.at(i);
+	}
 
-          double rndProbability = ((double) rand() / (RAND_MAX));
+	APContainer.SetSize(numOfAPs);
+	STAContainer.SetSize(numOfStations);
+	AppContainer.SetSize(numOfStations);
 
-          if (rndProbability <= ProbUserAgentEnabled){
-            STA_container[index].userType = 2;
-            user++;
-          }
-          else{
-            STA_container[index].userType = 1;
-          }
-          
-          k++;
-          index++;
-        }
-      }
-    }
-  }
-  printf("user: %i\n", user);
+	int index = 0;
+	for (int i=0; i<numOfAPs; i++){
+
+		
+		APContainer[i].apID = i;
+		APContainer[i].configuration.TxPower = 20;
+		APContainer[i].configuration.CCA = -82;
+		APContainer[i].configuration.nSS = 2;
+		APContainer[i].capabilities.IEEEProtocol = 2;
+		APContainer[i].capabilities.Multilink = true;
+		APContainer[i].capabilities.Mlearning = false;
+
+		
+		
+
+		std::uniform_real_distribution<double> distX(0,Xaxis);
+		std::uniform_real_distribution<double> distY(0,Yaxis);
+
+		
+		APContainer[i].coordinates.x = (i == 0) ? 10 : APContainer[i].coordinates.x = APContainer[i-1].coordinates.x + 10;
+		
+		APContainer[i].coordinates.y = 15;
+		APContainer[i].coordinates.z = 3;
+
+		
+		position = false;
+		while (!position){
+			if (i == 0){
+				position = true;
+			}
+			else{
+				for (int n=0; n<i; n++){
+					double distance = sqrt(pow((APContainer[n].coordinates.x - APContainer[i].coordinates.x),2) + pow((APContainer[n].coordinates.y - APContainer[i].coordinates.y),2) + pow((APContainer[n].coordinates.z - APContainer[i].coordinates.z),2));
+					if (distance <= 5.0){
+						APContainer[i].coordinates.x = distX(generator);
+						APContainer[i].coordinates.y = distY(generator);
+						n=0;
+					}
+					else{
+						position = true;
+					}
+				}
+			}
+		}
+
+		std::uniform_real_distribution<double> rad(1.0, 8.0); 
+		for (int j=0; j<stations.at(i); j++){
+			double r = rad(generator);
+			double theta = 2*M_PI*drand48();
+			AppContainer[index].destID = index;
+			STAContainer[index].staID = index;
+			STAContainer[index].servingAP = APContainer[i].apID;
+			STAContainer[index].traffic_type = (Random()>0.8) ? "STREAMING" : "ELASTIC";
+			
+			STAContainer[index].coordinates.x = APContainer[i].coordinates.x + r*std::cos(theta);
+			STAContainer[index].coordinates.y = APContainer[i].coordinates.y + r*std::sin(theta);
+			STAContainer[index].coordinates.z = 1.5;
+			STAContainer[index].configuration.TxPower = 15;
+			STAContainer[index].configuration.CCA = -82;
+			STAContainer[index].configuration.nSS = 2;
+			STAContainer[index].capabilities.IEEEProtocol = 2;
+			STAContainer[index].capabilities.Multilink = true;
+			STAContainer[index].capabilities.Mlearning = false;
+
+			WifiSTA station;
+			station.id = index;
+			station.coord.x = STAContainer[index].coordinates.x;
+			station.coord.y = STAContainer[index].coordinates.y;
+			station.coord.z = STAContainer[index].coordinates.z;
+			station.traffic_type = STAContainer[index].traffic_type;
+			APContainer[i].AssociatedSTAs.push_back(station);
+
+			index++;
+		}
+	}
 }
 
 
 #line 191 "neko.cc"
-void compcxx_Neko_11 :: LoadScenario(){
+void compcxx_Neko_9::GenerateResultReport(){
 
-  FILE* inputFileName = fopen("../Input/Inputfile.txt", "r");
-  char line [100];
-  char *str;
-  char ap[] = "AP";
-  char sta[] = "STA";
-  int i = 0;
-  int j = 0;
+	
+	if (channel_report){
+		FILE* OccupancyReport = fopen("../Output/ChOccupancy.txt","a");
+		fprintf(OccupancyReport, "*******************\n");
+		fprintf(OccupancyReport, "Simultation seed: %i\n", seed);
+		fprintf(OccupancyReport, "AP id; ChOcc 2_4; ChOcc5; ChOcc6\n");
 
-  numOfAPs = 0;
-  numOfStations = 0;
+		for (int i=0; i<(int)APContainer.size(); i++){
+			fprintf(OccupancyReport, "%i; ", APContainer[i].apID);
+			std::vector<double> AvgChOcc(maxIntNum, 0.0);
+			for (int j=0; j<(int)APContainer[i].statistics.ChOcc.size(); j++){
+				for (int n=0; n<(int)APContainer[i].statistics.ChOcc[j].size(); n++){
+					if (APContainer[i].statistics.ChOcc[j].at(n) != -1){
+						AvgChOcc.at(n) += APContainer[i].statistics.ChOcc[j].at(n);
+					}
+				}
+			}
+			for (int j=0; j<(int)AvgChOcc.size(); j++){
+				if (AvgChOcc.at(j) != 0){
+					AvgChOcc.at(j) = AvgChOcc.at(j)/(int)APContainer[i].statistics.SimT.size();
+				}
+				if(j<(int)AvgChOcc.size()-1){
+					fprintf(OccupancyReport, "%f; ", AvgChOcc.at(j));
+				}
+				else{
+					fprintf(OccupancyReport, "%f", AvgChOcc.at(j));
+				}
+			}
+			fprintf(OccupancyReport, "\n");
+		}
+	}
+	if (stats_report){
+		FILE* StatsReport = fopen("../Output/Stats.txt","a");
+		fprintf(StatsReport, "*******************\n");
+		fprintf(StatsReport, "Simultation seed: %i\n", seed);
+		fprintf(StatsReport, "Avg_Sat; Avg_Th; Avg_Dratio\n");
 
-  fgets(line,100,inputFileName); 
+		double TotalSatAvg = 0, TotalThAvg = 0;
+		for (int i=0; i<(int)STAContainer.size(); i++){
+			TotalSatAvg += std::accumulate(STAContainer[i].statistics.AvgSatPerFlow.begin(), STAContainer[i].statistics.AvgSatPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgSatPerFlow.size();
+			TotalThAvg += std::accumulate(STAContainer[i].statistics.AvgThPerFlow.begin(), STAContainer[i].statistics.AvgThPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgThPerFlow.size();
+		}
+		fprintf(StatsReport, "%f; %f; ", TotalSatAvg/(int)STAContainer.size(), TotalThAvg);
 
-  while ((fgets(line,100,inputFileName))){
-    str = strtok(line, ";");
-    if (strcmp(ap, str) == 0){
-      numOfAPs++;
-    }
-    else if(strcmp(sta, str) == 0){
-      numOfStations++;
-    }
-  }
-
-  APoint_container.SetSize(numOfAPs);
-  STA_container.SetSize(numOfStations);
-
-  rewind (inputFileName);
-  fgets(line,100,inputFileName); 
-
-  while ((fgets(line,100,inputFileName))){
-    str = strtok(line, ";");
-
-    if (strcmp(ap, str) == 0){
-      APoint_container[i].apID = i;
-      APoint_container[i].X = atof(strtok(NULL, ";"));
-      APoint_container[i].Y = atof(strtok(NULL, ";"));
-      APoint_container[i].Z = atof(strtok(NULL, ";"));
-      APoint_container[i].txPower = atoi(strtok(NULL, ";"));
-      APoint_container[i].CCA = atof(strtok(NULL, ";"));
-      APoint_container[i].actionSelected = atoi(strtok(NULL, ";"));
-      APoint_container[i].IEEEprotocolType = atoi(strtok(NULL, ";"));
-      APoint_container[i].trafficLoad = atof(strtok(NULL, ";\n"));
-      i++;
-    }
-    else if(strcmp(sta, str) == 0){
-      STA_container[j].staID = j;
-      STA_container[j].X = atof(strtok(NULL, ";"));
-      STA_container[j].Y = atof(strtok(NULL, ";"));
-      STA_container[j].Z = atof(strtok(NULL, ";"));
-      STA_container[j].txPower = atoi(strtok(NULL, ";"));
-      STA_container[j].userType = atoi(strtok(NULL, ";"));
-      j++;
-    }
-  }
-  fclose(inputFileName);
+		double TotalAvgDrop = 0;
+		for (int i=0; i<(int)APContainer.size(); i++){
+			TotalAvgDrop += std::accumulate(APContainer[i].statistics.AvgDRPerFlow.begin(), APContainer[i].statistics.AvgDRPerFlow.end(),0.0)/(double)APContainer[i].statistics.AvgDRPerFlow.size();
+		}
+		fprintf(StatsReport, "%f", TotalAvgDrop/(int)APContainer.size());
+		fprintf(StatsReport, "\n");
+	}
 }
 
 
-#line 250 "neko.cc"
+#line 246 "neko.cc"
+void compcxx_Neko_9::ProgressBar(trigger_t&){
+
+	int now = (int)SimTime();
+	double t = runTime;
+	double progress = now/t;
+
+	int barWidth = 50;
+	int pos = barWidth * progress;
+	std::cout << "[";
+
+	for (int i = 0; i < barWidth; i++) {
+				if (i < pos) std::cout << "=";
+				else if (i == pos) std::cout << ">";
+				else std::cout << " ";
+		}
+
+	std::cout << "] " << int(progress * 100.0) << "%\r";
+	std::cout.flush();
+
+	if (progress < 100){
+		Progress.Set(SimTime()+9);
+	}
+}
+
+
+#line 270 "neko.cc"
 int main(int argc, char *argv[]){
 
-  compcxx_Neko_11 test;
+	std::cout << "************* SIMULATION STARTS *************" << std::endl;
+	compcxx_Neko_9 test;
 
-  if (rnd == 1) {
-    test.seed = atoi(argv[1]);
-    test.Seed = test.seed;
-    srand(test.seed);
-  }
-  else{
-    srand(time(NULL));
-    test.Seed=rand()%100;
-  }
+	if (rnd == 1) {
+		test.seed = atoi(argv[1]);
+		medBW = atof(argv[2]);
+		policy = argv[3];
+		srand(test.seed);
+	}
+	else{
+		test.seed=time(NULL);
+		srand(test.seed);
+	}
 
-  test.StopTime(runTimeSim);
-  test.Setup();
-  test.Run();
+	test.StopTime(runTime);
+	test.Setup();
+	test.Run();
+
+	std::cout << "*********************************************" << std::endl;
 }

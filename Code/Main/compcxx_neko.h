@@ -11,14 +11,10 @@ template <class T> class compcxx_functor {public:
 void Connect(compcxx_component&_c, T _f){ c.push_back(&_c); f.push_back(_f); } 
 protected: std::vector<compcxx_component*>c; std::vector<T> f; }; 
 class compcxx_component { public: 
-typedef void  (compcxx_component::*AP_outSetNeighbors_f_t)(APBeacon &b);
-typedef void  (compcxx_component::*AP_outSendBeaconToNodes_f_t)(APBeacon &b);
-typedef void  (compcxx_component::*AP_outAssignAirTime_f_t)(Connection &n);
-typedef void  (compcxx_component::*AP_outLoadToNeighbor_f_t)(ApNotification &ap);
-typedef void  (compcxx_component::*AP_outChannelChange_f_t)(APBeacon &b);
-typedef void  (compcxx_component::*Station_outSetClientAssociation_f_t)(StationInfo &i);
-typedef void  (compcxx_component::*Station_outRequestAirTime_f_t)(Connection &n);
-typedef void  (compcxx_component::*Station_outFlowEnded_f_t)(Connection &n);
-typedef void  (compcxx_component::*Station_outUpdateAttachedStationsParams_f_t)(StationInfo &i);
-typedef void  (compcxx_component::*Station_outUpdateConnection_f_t)(StationInfo &i, int k);
+typedef void  (compcxx_component::*AP_outDataSTA_f_t)(Flow &q);
+typedef void  (compcxx_component::*AP_outCtrlApp_f_t)(AppCTRL &n);
+typedef void  (compcxx_component::*AP_outCtrlSTA_f_t)(Notification &n);
+typedef void  (compcxx_component::*AP_outCtrlAP_f_t)(Notification &n);
+typedef void  (compcxx_component::*Application_outCtrlAP_f_t)(AppCTRL &n);
+typedef void  (compcxx_component::*STA_outCtrlAP_f_t)(Notification &n);
 };

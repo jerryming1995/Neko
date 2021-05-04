@@ -1,507 +1,338 @@
 #ifndef _STA_
 #define _STA_
 
-
-#include <cmath>
-#include <algorithm>
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <list>
-#include <vector>
-#include <time.h>
-#include <deque>
-
-
-component Station : public TypeII {
-
-public:
-  int staID;                                                        //Client iD (starting at 0).
-  int userType;                                                     //Flag to control user types (High (0), Med (1) or Low (2) traffic)
-  int servingAP;                                                    //Id of the serving AP.
-  double X, Y, Z;                                                   //Coordinates of the client.
-
-  int txPower;                                                      //TxPower of each client.
-  double DLDataRate;                                                //Downlink data rate.
-  double ULDataRate;                                                //Uplink data rate.
-  double RSSI;                                                      //RSSI value received at the client.
-  int ChBW;                                                         //Channel BW used.
-  double frequency;                                                 //TX frequency.
-  int IEEE_protocol;                                                //IEEE Protocol.
-
-  double AirTimeRequired;                                           //Air time required by station.
-  int FlowType;                                                     //Flow type -> 0 DL flow, 1 UL flow.
-
-  std::deque <APBeacon> detectedWLANs;                              //Beacons detected from each WLAN.
-  std::vector<int> InRangeAPs;                                      //Id of detected APs within a CCA range
-  std::vector<int> CandidateAPs;                                    //Id of elegible APs to perform client steering
-
-
-  //Traces for evaluation purposes.
-  std::vector<double> AirTimeEvo;                                   //Vector to store airtime.
-  std::vector<double> Satisfaction;                                 //Vector to store satisfaction.
-  std::vector<double> CandidateAPsTrafficLoad;                      //Vector to store the last traffic load registered from a certain AP.
-
-  std::vector<double> reward_action;                                //Vector to store avg. reward whitin a window (30 min).
-  std::vector<double> estimated_reward_action;
-  std::vector<double> occupancy_AP;                                 //Vector to store avg. occupancy detected of an AP within a window.
-
-  std::vector<int> Times_ActionSelected;                            //Times arm has been selected.
-  std::vector<int> Action_Selected;                                 //Vector to store the APs selected when eGreedy.
-  std::vector<int> ActionChange;
-  std::vector<double> TimeStamp;
-  std::vector<double> Throughput;
-
-  std::vector< std::vector<double> > estimated_reward_Per_action;    //Matrix to store estimated reward per action;
-  std::vector< std::vector<double> > estimated_reward_Per_action_Time;
-
-  std::vector<double> mSat;
-  std::vector<double> timeSim;                                      //Time stamp of simulation for the airtime value.
-  std::vector<double> timeSim2;                                     //Time stamp of simulation for the satisfaction value.
-
-  //Global scope variables.
-  double iter;
-  int flag, TimeSizeF, TimeSizeS;
-  double requestedBW, startTX, finishTX, bits_Sent, totalBits, timeActive;
+component STA : public TypeII {
 
 public:
 
-  Station();
+	int staID;																						//General identifier for the node
+	int servingAP;																				//Identifier of the serving AP
+	std::string state;																		//Whether an station is idle (no flow receiving) or busy (receiving flow)
+	std::string traffic_type;															//Type of traffic that the station requires from the Ap
 
-  // COST
-  void Setup();
-  void Start();
-  void Stop();
+	Position coordinates;																	//coordinates of the node.
+	Configuration configuration;													//configuration of the node.
+	Capabilities capabilities;														//capabilities of the node.
 
-  //Inports
-  inport void inReceivedBeacon(APBeacon &b);
-  inport void inAssignedAirTime(Connection &n);
-  inport void inUpdateStationParameters(APBeacon &b);
+	std::vector<STAInterface> InterfaceContainer;					//Interfaces of the node.
+	std::vector<WifiAP> InRangeAPs;												//Vector to store the inrange APs detected by the initial PROBE_REQ
+	std::deque <Notification> Queue;
 
-  //Outports
-  outport void outSetClientAssociation(StationInfo &i);
-  outport void outRequestAirTime(Connection &n);
-  outport void outFlowEnded(Connection &n);
-  outport void outUpdateAttachedStationsParams(StationInfo &i);
-  outport void outUpdateConnection(StationInfo &i, int k);
+	Flow flow;																						//Flow transmitted by the AP.
+	STAStatistics statistics;															//Statistics gathered at the station.
 
-  //Triggers
-  Timer <trigger_t> trigger_ProcessBeacons;
-  Timer <trigger_t> trigger_SendRequestedAT;
-  Timer <trigger_t> trigger_TxTimeFinished;
-  Timer <trigger_t> trigger_Action;
+public:
 
-  inport inline void ProcessBeacons(trigger_t&);
-  inport inline void SendRequestedAT(trigger_t&);
-  inport inline void SendTxTimeFinished(trigger_t&);
-  inport inline void APselectionBylearning(trigger_t&);
+	STA();
+	~STA();
 
+	void Setup();																					//COST libary method
+	void Start();																					//COST libary method
+	void Stop();																					//COST libary method
+
+	//Inports
+	inport void inCrtlAP(Notification &n);								//Control channel from Aps to communicate with stations.
+	inport void inDataAP(Flow &f);												//Data channel to receive flows from AP.
+
+	//Outports
+	outport void outCtrlAP(Notification &n);							//Control channel to APs to communicate control messages.
+
+	//Timers and functions to trigger
+	//Timer <trigger_t> DAPS;																//Trigger that fires the dynamic access point selection.
+	//inport inline void DAPSByLearning(trigger_t&);				//Function that performs the learning process and the dynamic access point selection.
+
+	Timer <trigger_t> WaitProbes;
+	inport inline void Discovery(trigger_t&);
+
+	//Other member functions
+	void Initialization();																//Function that creates interfaces. The initial configuration is requested to the serving AP.
+	void NotifyAP(std::string, std::vector<double> *v);
+	void DoMLOSetup(Notification &n);
+	void UpdateInterfaces(Notification &n);
+	void CalculateStats();
 };
 
-Station :: Station(){
-  connect trigger_ProcessBeacons.to_component,ProcessBeacons;
-  connect trigger_SendRequestedAT.to_component,SendRequestedAT;
-  connect trigger_TxTimeFinished.to_component,SendTxTimeFinished;
-  connect trigger_Action.to_component,APselectionBylearning;
+STA::STA (){
+	connect WaitProbes.to_component,Discovery;
+	//connect DAPS.to_component,DAPSByLearning;
 }
 
-void Station :: Setup(){
-
+STA::~STA (){
 }
 
-void Station :: Start(){
-  iter = 1;
-  flag = 0;
-  TimeSizeF = 0;
-  TimeSizeS = 0;
-}
-
-void Station :: Stop(){
-
-  int TimeWrap = 900;
-  double pos = runTimeSim/TimeWrap;
-  int step = 0;
-  int count = 0;
-  int endVal = TimeWrap-1;
-  double tmp_mean = 0;
-  double m = 0;
-
-  for (int k=0; k<pos; k++){
-    for (int init=0; init<(int)timeSim2.size(); init++){
-      if (step <= timeSim2.at(init) && timeSim2.at(init) < endVal){
-        tmp_mean = tmp_mean + Satisfaction.at(init);
-        count = count + 1;
-      }
-    }
-    m = tmp_mean/count;
-
-    mSat.push_back(m);
-
-    tmp_mean = 0;
-    m = 0;
-    count = 0;
-    step = step+TimeWrap;
-    endVal = endVal+TimeWrap;
-  }
-}
-
-void Station :: inReceivedBeacon(APBeacon &b){
-
-  detectedWLANs.push_back(b);
-  trigger_ProcessBeacons.Set(SimTime()+0.001);
-}
-
-void Station :: ProcessBeacons(trigger_t&){
-
-  StationInfo info;
-
-  std::vector<double>RSSIvalueUL;
-  std::vector<double>DLDataRates;
-  std::vector<double>ULDataRates;
-  std::vector<double>InRangeAPsRSSI;
-
-  if (detectedWLANs.size() !=0){
-
-    while (detectedWLANs.size() > 0) {
-      double tmpRSSIvalueDL, tmpRSSIvalueUL, DL_r, UL_r;
-
-      APBeacon b = detectedWLANs.front();
-      tmpRSSIvalueUL = txPower - PropL(X, Y, Z, b.header.X, b.header.Y, b.header.Z, b.freq);
-
-      if (tmpRSSIvalueUL> -80){
-
-        tmpRSSIvalueDL = b.Tx_Power - PropL(X, Y, Z, b.header.X, b.header.Y, b.header.Z, b.freq);
-
-        InRangeAPs.push_back(b.header.sourceID);
-        InRangeAPsRSSI.push_back(tmpRSSIvalueDL);
-        RSSIvalueUL.push_back(tmpRSSIvalueUL);
-
-        DL_r = SetDataRate(tmpRSSIvalueDL, b.protocolType, b.BW);
-        UL_r = SetDataRate(tmpRSSIvalueUL, b.protocolType, b.BW);
-
-        DLDataRates.push_back(DL_r);
-        ULDataRates.push_back(UL_r);
-
-        if (tmpRSSIvalueUL >= -75)
-        {
-          CandidateAPs.push_back(b.header.sourceID);
-        }
-      }
-      detectedWLANs.pop_front();
-    }
-  }
-
-  switch (stationLearningFlag) {
-    case 0:{ //No learning, best RSSI
-        double RSSI_UL;
-
-        RSSI = -100;
-        servingAP = 0;
-
-        for (int i=0; i<(int)InRangeAPsRSSI.size(); i++){
-          if (RSSI<=InRangeAPsRSSI.at(i)){
-            servingAP = InRangeAPs.at(i);
-            RSSI = InRangeAPsRSSI.at(i);
-            RSSI_UL = RSSIvalueUL.at(i);
-            DLDataRate = DLDataRates.at(i);
-            ULDataRate = ULDataRates.at(i);
-          }
-        }
-
-        info.header.sourceID = staID;
-        info.header.destinationID = servingAP;
-        info.RSSI = RSSI_UL;
-
-        outSetClientAssociation(info);
-        trigger_SendRequestedAT.Set(SimTime()+Exponential(flowActivation));
-
-      }break;
-
-    case 1:{ //Epsilon Greedy algorithm, first AP selection is done by best RSSI
-
-        double RSSI_UL;
-        int size = (int)CandidateAPs.size();
-
-        RSSI = -100;
-        servingAP = 0;
-
-        reward_action.assign(size,0.0);
-        occupancy_AP.assign(size,0.0);
-        Times_ActionSelected.assign(size,0.0);
-
-        for (int i=0; i<(int)InRangeAPsRSSI.size(); i++){
-          if (RSSI<=InRangeAPsRSSI.at(i)){
-            servingAP = InRangeAPs.at(i);
-            RSSI = InRangeAPsRSSI.at(i);
-            RSSI_UL = RSSIvalueUL.at(i);
-            DLDataRate = DLDataRates.at(i);
-            ULDataRate = ULDataRates.at(i);
-          }
-        }
-
-        info.header.sourceID = staID;
-        info.header.destinationID = servingAP;
-        info.RSSI = RSSI_UL;
-        outSetClientAssociation(info);
-
-        if (size > 1){
-          trigger_Action.Set(SimTime()+offsetSTA);
-        }
-        trigger_SendRequestedAT.Set(SimTime()+Exponential(flowActivation));
-
-    }break;
-
-    case 2:{ //Thompson Sampling, first AP selection is done by best RSSI
-
-        double RSSI_UL;
-        int size = (int)CandidateAPs.size();
-
-        RSSI = -100;
-        servingAP = 0;
-
-        reward_action.assign(size,0.0);
-        occupancy_AP.assign(size,0.0);
-        estimated_reward_action.assign(size,0.0);
-        Times_ActionSelected.assign(size,0.0);
-        estimated_reward_Per_action.resize(size);
-        estimated_reward_Per_action_Time.resize(size);
-
-        for (int i=0; i<(int)InRangeAPsRSSI.size(); i++){
-          if (RSSI<=InRangeAPsRSSI.at(i)){
-            servingAP = InRangeAPs.at(i);
-            RSSI = InRangeAPsRSSI.at(i);
-            RSSI_UL = RSSIvalueUL.at(i);
-            DLDataRate = DLDataRates.at(i);
-            ULDataRate = ULDataRates.at(i);
-          }
-        }
-
-        info.header.sourceID = staID;
-        info.header.destinationID = servingAP;
-        info.RSSI = RSSI_UL;
-        outSetClientAssociation(info);
-
-        if ((size > 1)&&(userType == 2)){
-          trigger_Action.Set(SimTime()+offsetSTA);
-        }
-
-        trigger_SendRequestedAT.Set(SimTime()+Exponential(flowActivation));
-
-    }break;
-  }
-
-  ActionChange.push_back(servingAP);
-  TimeStamp.push_back(SimTime());
+void STA::Setup(){
 
 }
 
-void Station :: SendRequestedAT(trigger_t&){
-
-  double TimeMPDU, Tack, Trts, Tcts, LDBPS_DL, LDBPS_UL;
-
-  Connection ConnRequest;
-
-  LDBPS_DL = (DLDataRate*pow(10,6))*Tofdm;
-  LDBPS_UL = (ULDataRate*pow(10,6))*Tofdm;
-
-  FlowType = 0; //To avoid collisions
-
-  requestedBW = Random(medBW) + 1;
-
-  switch (FlowType) {
-    case 0:{ //DL flow
-
-      TimeMPDU = TphyHE + std::ceil(((Lsf+Lmac+frameLength+Ltb)/(LDBPS_DL)))*Tofdm;
-      Tack = TphyL + std::ceil(((Lsf+Lack+Ltb)/(legacyRate)))*Tofdm_leg;
-      Trts = TphyL + std::ceil(((Lsf+Lrts+Ltb)/(legacyRate)))*Tofdm_leg;
-      Tcts = TphyL + std::ceil(((Lsf+Lcts+Ltb)/(legacyRate)))*Tofdm_leg;
-
-      AirTimeRequired = (std::ceil((requestedBW*pow(10,6)/frameLength))*(1/(1-Pe)))*(((CW/2)*Tempty)+(Trts+Tsifs+Tcts+Tsifs+TimeMPDU+Tsifs+Tack+Tdifs+Tempty));
-
-      ConnRequest.header.sourceID = staID;
-      ConnRequest.header.destinationID = servingAP;
-      ConnRequest.LoadByStation = AirTimeRequired*100;
-      break;
-    }
-    case 1:{ //UL flow
-      TimeMPDU = TphyHE + std::ceil(((Lsf+Lmac+frameLength+Ltb)/(LDBPS_UL)))*Tofdm;
-      Tack = TphyL + std::ceil(((Lsf+Lack+Ltb)/(legacyRate)))*Tofdm_leg;
-      Trts = TphyL + std::ceil(((Lsf+Lrts+Ltb)/(legacyRate)))*Tofdm_leg;
-      Tcts = TphyL + std::ceil(((Lsf+Lcts+Ltb)/(legacyRate)))*Tofdm_leg;
-
-      AirTimeRequired = (std::ceil((requestedBW*pow(10,6)/frameLength))*(1/(1-Pe)))*(((CW/2)*Tempty)+(Trts+Tsifs+Tcts+Tsifs+TimeMPDU+Tsifs+Tack+Tdifs+Tempty));
-
-      ConnRequest.header.sourceID = staID;
-      ConnRequest.header.destinationID = servingAP;
-      ConnRequest.LoadByStation = AirTimeRequired*100;
-      break;
-    }
-  }
-
-  startTX = SimTime();
-  TimeSizeS = (int)timeSim2.size();
-
-  outRequestAirTime(ConnRequest);
-
-  AirTimeEvo.push_back(AirTimeRequired);
-  timeSim.push_back(SimTime());
-
-  trigger_TxTimeFinished.Set(SimTime()+Exponential(flowDuration));
+void STA::Start(){
+	Initialization();
 }
 
-void Station :: inAssignedAirTime(Connection &response){
-
-  if (staID == response.header.destinationID){
-    double MaxLoad;
-
-    if (0 < AirTimeRequired){
-      MaxLoad = 100;
-      if (response.Ap_Load < 100){
-        CandidateAPsTrafficLoad.push_back(response.Ap_Load);
-        Satisfaction.push_back((double)1);
-      }
-      else{
-        CandidateAPsTrafficLoad.push_back((double)100);
-        Satisfaction.push_back(((std::min(MaxLoad,response.Ap_Load))/(response.Ap_Load)));
-      }
-      Action_Selected.push_back(servingAP);
-      timeSim2.push_back(SimTime());
-    }
-  }
+void STA::Stop(){
 }
 
-void Station :: SendTxTimeFinished(trigger_t&){
+/* ----------------------------------------------------------------------------------
+Upon start, the STA is initialized by creating the interfaces. The fc and Bw selection
+will be later configured by the serving AP.
 
-  finishTX = SimTime();
-  TimeSizeF = (int)timeSim2.size();
-  int size = TimeSizeF-TimeSizeS;
-  double throughput = GetData(FlowType, TimeSizeS, size, &Satisfaction, requestedBW);
+- If MLO enabled, the number of interfaces depends on the maximum set by the config
+file. Otherwise, only one is considered.s
+---------------------------------------------------------------------------------- */
 
-  Throughput.push_back(throughput);
-  bits_Sent = bits_Sent + (GetData(FlowType, TimeSizeS, size, &Satisfaction, requestedBW)*(finishTX-startTX));
-  totalBits = totalBits + (requestedBW*(finishTX-startTX));
-  //timeActive = timeActive + (finishTX-startTX);
+void STA::Initialization(){
 
-  Connection ConnFinish;
-  ConnFinish.header.destinationID = servingAP;
-  ConnFinish.header.sourceID = staID;
-  ConnFinish.LoadByStation = AirTimeRequired*100;
-
-  outFlowEnded(ConnFinish);
-
-  AirTimeRequired = 0;
-  AirTimeEvo.push_back(AirTimeRequired);
-  timeSim.push_back(SimTime());
-
-  trigger_SendRequestedAT.Set(SimTime()+Exponential(flowActivation));
+	if (capabilities.Multilink){
+		int intSz = maxIntNum;
+		for (int i=0; i<intSz; i++){
+			STAInterface interface;
+			interface.id = i;
+			InterfaceContainer.push_back(interface);
+		}
+	}
+	else{
+		STAInterface interface;
+		interface.id = 0;
+		interface.active = true;
+		InterfaceContainer.push_back(interface);
+	}
+	NotifyAP("PROBE_REQ", nullptr);
+	NotifyAP("CONFIG_REQ", nullptr);
 }
 
-void Station :: inUpdateStationParameters(APBeacon &b){
+/* ----------------------------------------------------------------------------------
+Function to notify different control messages to the AP:
+- PROBE_REQ -> To construct the In range AP set.
+- CONFIG_REQ -> To request configuration from the serving AP for the association link
+- MLO_SETUP_REQ -> To trigger the MLO configuration for all the interfaces
+- UPDATE_MLO -> In case of association change, the update MLO triggers a reconfiguration
+process for all interfaces.
+---------------------------------------------------------------------------------- */
 
-  if (staID == b.header.destinationID){
-    double RSSIvalueUL;
-    StationInfo info;
+void STA::NotifyAP(std::string type, std::vector<double> *v){
 
-    RSSI = b.Tx_Power - PropL(X,Y,Z,b.header.X,b.header.Y,b.header.Z,b.freq);
-    RSSIvalueUL = txPower - PropL(X,Y,Z,b.header.X,b.header.Y,b.header.Z,b.freq);
-    frequency = b.freq;
-    IEEE_protocol = b.protocolType;
-    ChBW = b.BW;
-
-    DLDataRate = SetDataRate(RSSI, IEEE_protocol, ChBW);
-    ULDataRate = SetDataRate(RSSIvalueUL, IEEE_protocol, ChBW);
-
-    info.header.sourceID = staID;
-    info.header.destinationID = b.header.sourceID;
-    info.RSSI = RSSI;
-
-    outUpdateAttachedStationsParams(info);
-  }
+	if (type.compare("PROBE_REQ") == 0){
+		Notification notification ("PROBE_REQ", staID, -1);
+		outCtrlAP(notification);
+	}
+	else if (type.compare("CONFIG_REQ") == 0){
+		Notification notification ("CONFIG_REQ", staID, servingAP);
+		outCtrlAP(notification);
+	}
+	else if (type.compare("MLO_SETUP_REQ") == 0){
+		Notification notification ("MLO_SETUP_REQ", staID, servingAP);
+		notification.setLinkQuality(*v);
+		outCtrlAP(notification);
+	}
+	else if (type.compare("UPDATE_MLO") == 0){
+		Notification notification ("UPDATE_MLO", staID, servingAP);
+		notification.setLinkQuality(*v);
+		outCtrlAP(notification);
+	}
 }
 
-void Station :: APselectionBylearning(trigger_t&){
+/* ----------------------------------------------------------------------------------
+Function that receives the different control messages from the AP:
+- PROBE_RESP -> All APs send the response message to the STA, which constructs the
+set of nearby APs.
+- CONFIG_RESP -> The serving AP asnwers back with the config for the association link.
+Upon this message, if the STA is MLO capable calculates the linkQ and sends it back
+to perform the MLO configuration.
+- MLO_SETUP_RESP -> After evaluating the linkQ, the AP sends back the links available
+to perform the MLO operation.
+- CHANNEL_SWITCH_STA -> If the AP changes its configuration, it notifies the sta.
+- SAT_UPDATE -> The Ap notifies the station with any change, so the flow satisfaction
+can be updated by the station.
+- FLOW_END -> The ongoing flow finished, and the statistics can be collected.
+---------------------------------------------------------------------------------- */
 
-  if (trigger_TxTimeFinished.Active() == 0){
+void STA::inCrtlAP(Notification &n){
 
-    int oldAP = servingAP;
-    int num_arms = CandidateAPs.size();
-    int index = SearchAction(servingAP, num_arms, &CandidateAPs);
+	if (n.getDestination() == staID){
+		std::string type = n.getType();
+		if (type.compare("PROBE_RESP") == 0){
+			Queue.push_back(n);
+			if (!WaitProbes.Active()){
+				WaitProbes.Set(SimTime());
+			}
+		}
+		else if (type.compare("CONFIG_RESP") == 0){
+			if (!capabilities.Multilink){
+				std::vector<double> fc = n.getFc();
+				InterfaceContainer.at(0).fc = fc.at(0);
+			}
+			else{
+				DoMLOSetup(n);
+			}
+		}
+		else if (type.compare("MLO_SETUP_RESP") == 0){
 
-    switch (stationLearningFlag) {
+			for (int i=0; i<(int)InterfaceContainer.size(); i++){
+				InterfaceContainer.at(i).active = false;
+			}
 
-      case 1:{  /*Epsilon Greedy strategy */
+			std::vector<double> LinkFc = n.getFc();
+			for (int i=0; i<(int)LinkFc.size(); i++){
+				std::string band = GetBand(LinkFc.at(i));
+				if (band.compare("2_4GHz") == 0){
+					InterfaceContainer.at(i).fc = LinkFc.at(i);
+					InterfaceContainer.at(i).active = true;
+				}
+				else if (band.compare("5GHz") == 0){
+					InterfaceContainer.at(i).fc = LinkFc.at(i);
+					InterfaceContainer.at(i).active = true;
+				}
+				else if (band.compare("6GHz") == 0){
+					InterfaceContainer.at(i).fc = LinkFc.at(i);
+					InterfaceContainer.at(i).active = true;
+				}
+			}
+		}
+		else if(type.compare("CHANNEL_SWITCH_STA") == 0){
 
-        if (flag == 0){
-          int i = rand()%num_arms;
-          servingAP = CandidateAPs.at(i);
-          Times_ActionSelected[i] = Times_ActionSelected[i] + 1;
+			for (int i=0; i<(int)InterfaceContainer.size(); i++){
+				InterfaceContainer.at(i).active = false;
+			}
+			UpdateInterfaces(n);
+		}
+		else if ((type.compare("SAT_UPDATE") == 0) && (state.compare("ACTIVE") == 0)){
 
-          flag++;
-        }
-        else{
-          double epsilon = 1/sqrt(iter);
-          reward_action[index] = GetReward(servingAP, &Satisfaction, &Action_Selected, &timeSim2, SimTime());
-          occupancy_AP[index] = GetOccupancy(servingAP, &CandidateAPsTrafficLoad, &Action_Selected, &timeSim2, SimTime());
-          servingAP = CandidateAPs.at(Egreedy(num_arms, &reward_action, &occupancy_AP, epsilon, &Times_ActionSelected));
-        }
+			std::vector<double> satisfaction = n.getSat();
+			flow.setSat(satisfaction);
 
-        StationInfo hello;
-        hello.header.sourceID = staID;
-        hello.header.destinationID = servingAP;
-        hello.RSSI = 0;
+			std::vector<double> Fc = n.getFc();
+			std::vector<double> sat_evolution (InterfaceContainer.size(), 0.0);
+			std::vector<double> sim_time (InterfaceContainer.size(), 0.0);
 
-        if (oldAP != servingAP){
-          outUpdateConnection(hello, oldAP);
-        }
+			for (int j=0; j<(int)InterfaceContainer.size(); j++){
+				if ((satisfaction.at(j) != -1) && (InterfaceContainer.at(j).active)){
+					sat_evolution.at(j) = satisfaction.at(j);
+					sim_time.at(j) = SimTime();
+					break;
+				}
+			}
+			statistics.SatEvo.push_back(sat_evolution);
+			statistics.SimT.push_back(sim_time);
+		}
+		else if(type.compare("FLOW_END") == 0){
+			state = "IDLE";
+			CalculateStats();
+		}
+	}
+	else{
+		std::string type = n.getType();
+		if ((type.compare("SAT_UPDATE") == 0) && (state.compare("ACTIVE") == 0)){
 
-        ActionChange.push_back(servingAP);
-        TimeStamp.push_back(SimTime());
+			std::vector<double> satisfaction = n.getSat();
+			flow.setSat(satisfaction);
 
-        trigger_Action.Set(SimTime()+SearchBestAP);
-        iter++;
+			std::vector<double> Fc = n.getFc();
+			std::vector<double> sat_evolution (InterfaceContainer.size(), 0.0);
+			std::vector<double> sim_time (InterfaceContainer.size(), 0.0);
 
-      }break;
+			for (int j=0; j<(int)InterfaceContainer.size(); j++){
+				if ((satisfaction.at(j) != -1) && (InterfaceContainer.at(j).active)){
+					sat_evolution.at(j) = satisfaction.at(j);
+					sim_time.at(j) = SimTime();
+					break;
+				}
+			}
+			statistics.SatEvo.push_back(sat_evolution);
+			statistics.SimT.push_back(sim_time);
+		}
+	}
+}
 
-      case 2:{  /*Thompson Sampling strategy */
+/* ----------------------------------------------------------------------------------
+Function that the new flow from the AP to the STA.
+---------------------------------------------------------------------------------- */
 
-        if (flag == 0){
-          estimated_reward_action[index] = ((estimated_reward_action[index] * Times_ActionSelected[index]) + (reward_action[index]))/ (Times_ActionSelected[index] + 2);
-          estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
-          estimated_reward_Per_action_Time[index].push_back(SimTime());
-          servingAP = CandidateAPs.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_AP, &Times_ActionSelected));
-          flag++;
-        }
-        else{
-          reward_action[index] = GetReward(servingAP, &Satisfaction, &Action_Selected, &timeSim2, SimTime());
-          occupancy_AP[index] = (GetOccupancy(servingAP, &CandidateAPsTrafficLoad, &Action_Selected, &timeSim2, SimTime()))/100;
-          estimated_reward_action[index] = ((estimated_reward_action[index] * Times_ActionSelected[index]) + (reward_action[index]))/ (Times_ActionSelected[index] + 2);
-          estimated_reward_Per_action[index].push_back(estimated_reward_action[index]);
-          estimated_reward_Per_action_Time[index].push_back(SimTime());
-          servingAP = CandidateAPs.at(ThompsonSampling(num_arms, &estimated_reward_action, &occupancy_AP, &Times_ActionSelected));
-        }
+void STA::inDataAP(Flow &f){
+	if (f.getDestination() == staID){
+		flow = f;
+		state = "ACTIVE";
+	}
+}
 
-        StationInfo hello;
-        hello.header.sourceID = staID;
-        hello.header.destinationID = servingAP;
-        hello.RSSI = 0;
+/* ----------------------------------------------------------------------------------
+Function that constructs the in range APs set after receiving the PROBE_RESP messages
+from all the APs in the simulation.
+---------------------------------------------------------------------------------- */
 
-        if (oldAP != servingAP){
-          outUpdateConnection(hello, oldAP);
-        }
+void STA::Discovery(trigger_t&){
+	while (Queue.size() > 0) {
+		Notification n = Queue.front();
+		Position AP_coord = n.getPosition();
+		std::vector<double> fc = n.getFc();
 
-        ActionChange.push_back(servingAP);
-        TimeStamp.push_back(SimTime());
+		double RSSI = CalculateRSSI(configuration.TxPower, fc.at(0), AP_coord.x, AP_coord.y, AP_coord.z, coordinates.x, coordinates.y, coordinates.z);
+		if (RSSI >= RSSIth){
+			WifiAP ap;
+			ap.id = n.getSender();
+			ap.coord = AP_coord;
+			InRangeAPs.push_back(ap);
+		}
+		Queue.pop_front();
+	}
+}
 
-        trigger_Action.Set(SimTime()+SearchBestAP);
-      }break;
-    }
-  }
+/* ----------------------------------------------------------------------------------
+Function that performs the MLO setup, evaluating the linkQ of each reported link by
+the AP. Once the linkQ are calculated, a vector is sent to the AP.
+---------------------------------------------------------------------------------- */
 
-  else{
-    double t = trigger_TxTimeFinished.GetTime() - SimTime() + 0.001;
-    trigger_Action.Cancel();
-    trigger_Action.Set(SimTime()+t);
-  }
+void STA::DoMLOSetup(Notification &n){
+
+	Position AP_coord = n.getPosition();
+	std::vector<double> fc = n.getFc();
+	std::vector<double> linkQ;
+
+	for (int i=0; i<(int)fc.size(); i++){
+		double RSSI = CalculateRSSI(configuration.TxPower, fc.at(i), AP_coord.x, AP_coord.y, AP_coord.z, coordinates.x, coordinates.y, coordinates.z);
+		linkQ.push_back(RSSI);
+	}
+
+	NotifyAP("MLO_SETUP_REQ", &linkQ);
+}
+
+/* ----------------------------------------------------------------------------------
+Function that updates the configuration of each interface upon channel switch event
+triggered by the serving AP. If the station is MLO the links are checked in order to
+check if they still meet the quality criteria.
+---------------------------------------------------------------------------------- */
+
+void STA::UpdateInterfaces(Notification &n){
+
+	if (!capabilities.Multilink){
+		std::vector<double> fc = n.getFc();
+		InterfaceContainer.at(0).active = true;
+		InterfaceContainer.at(0).fc = fc.at(0);
+	}
+	else{
+		for (int i=0; i<(int)InRangeAPs.size(); i++){
+			if (servingAP == InRangeAPs.at(i).id){
+				std::vector<double> fc = n.getFc();
+				std::vector<double> linkQ;
+
+				for (int j=0; j<(int)fc.size(); j++){
+					double RSSI = CalculateRSSI(configuration.TxPower, fc.at(j), InRangeAPs.at(i).coord.x, InRangeAPs.at(i).coord.y, InRangeAPs.at(i).coord.z, coordinates.x, coordinates.y, coordinates.z);
+					linkQ.push_back(RSSI);
+				}
+				NotifyAP("UPDATE_MLO", &linkQ);
+				break;
+			}
+		}
+	}
+}
+
+/* ----------------------------------------------------------------------------------
+Function to get the statistics of the ongoing flow.
+---------------------------------------------------------------------------------- */
+
+void STA::CalculateStats(){
+
+	double satisfaction = flow.getSatisfaction();
+	statistics.AvgSatPerFlow.push_back(satisfaction);
+	statistics.AvgThPerFlow.push_back(satisfaction*flow.getLength());
 }
 
 #endif

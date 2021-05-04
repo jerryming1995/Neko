@@ -1,5 +1,4 @@
-#include <math.h>
-#include <random>
+
 
 //        --------- Epsilon greedy --------        //
 
@@ -72,7 +71,7 @@ double gaussrand(double mean, double std){
 }
 
 
-int ThompsonSampling (int num_actions, std::vector<double>* estimated_reward, std::vector<double>* occupancy, std::vector<int>* times_arm_selected) {
+int ThompsonSampling (int num_actions, std::vector<double> *estimated_reward, std::vector<double> *times_arm_selected) {
 
 	int action_ix = 0;
   double theta[num_actions] = {0};
@@ -94,6 +93,5 @@ int ThompsonSampling (int num_actions, std::vector<double>* estimated_reward, st
 		}
 	}
 
-	times_arm_selected->at(action_ix) = times_arm_selected->at(action_ix) + 1;
 	return action_ix;
 }
