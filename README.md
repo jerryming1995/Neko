@@ -7,7 +7,7 @@ In order to execute a simulation do:
 
    $ chmod -R 777 dirname
 
-* STEP 2: Set up the corresponding variables in ./Code/Main/macros.h file
+* STEP 2: Set up the corresponding variables in ./Code/Config/constants.h file
 
 * STEP 3: Build the project
 
