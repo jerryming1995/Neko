@@ -111,6 +111,11 @@ void AppCTRL::setTProfile(std::string p){
 	_tprofile = p;
 }
 
+void AppCTRL::setDuration(double t){
+
+	_duration = t;
+}
+
 std::string AppCTRL::getType(){
 
 	return _type;
@@ -129,4 +134,9 @@ int AppCTRL::getDestination(){
 std::string AppCTRL::getTProfile(){
 
 	return _tprofile;
+}
+
+double AppCTRL::getDuration(){
+
+	return _duration;
 }

@@ -32,6 +32,7 @@ struct Configuration{
 struct WifiSTA{
 
 	int id;												//Identifier of the STA
+	double EFlowLoss;							//Vector that tracks the losses of the flow, per station, and adds them at the beggining of a new flow. Thus, EFlows must register 0 losses.
 	Position coord;								//Position of the STA
 	std::string traffic_type;			//Type of traffic for the STA
 	std::vector<double> fc;				//vector of frenquencies in which an station is allowed to operate.

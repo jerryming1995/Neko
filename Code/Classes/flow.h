@@ -9,6 +9,7 @@ private:
 	std::string _type;															//Type of flow (elastic or streaming)
 	int _sender;																		//Source node. Tx of the flow
 	int _destination;																//Destination node. Rx of the flow
+	double _duration;
 	double _timestamp;
 	double _length;																	//Length. For elastic flows will be Mb, for streaming Mbps.
 	std::vector<double> _TxTime;										//Airtime occupancy of the flow in each interface.
@@ -24,6 +25,7 @@ public:
 	void setType(std::string);
 	void setSender(int);
 	void setDestination(int);
+	void setDuration(double);
 	void setTimeStamp(double);
 	void setTxTime(double);
 	void setLength(double);
@@ -34,6 +36,7 @@ public:
 	std::string getType();
 	int getSender();
 	int getDestination();
+	double getDuration();
 	double getTimeStamp();
 	double getLength();
 	std::vector<double> getTxTime();

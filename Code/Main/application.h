@@ -77,17 +77,18 @@ during the whole simulation time.
 
 void Application::Start(trigger_t&){
 
-	//Start flow
-	AppCTRL ctrl("FLOW_START", srcID, destID);
-	outCtrlAP(ctrl);
-
-	/* The Application controls streaming flows,
-	since we need triggers to indicate their end.*/
 	if (TProfile.compare("STREAMING") != 0){
-		end.Set(SimTime()+Exponential(t_EndFlow));
+		end.Set(SimTime()+1+Exponential(t_EndFlow));
+
+		AppCTRL ctrl("FLOW_START", srcID, destID);
+		ctrl.setDuration((end.GetTime()-SimTime()));
+		outCtrlAP(ctrl);
 	}
 	else{
 		end.Set(runTime-(1E-3));
+		AppCTRL ctrl("FLOW_START", srcID, destID);
+		ctrl.setDuration((double)runTime);
+		outCtrlAP(ctrl);
 	}
 }
 

@@ -19,7 +19,7 @@ public:
 	std::vector<WifiAP> NeighboringAPs;							//Vector to store the neighboring APs (inrange APs).
 	std::vector<WifiSTA> AssociatedSTAs;						//Vector to store the associated stations.
 	std::vector<Flow> OnGoingFlows;									//Queue of ongoing flows.
-	//std::vector<Agent> AgentContainer;							//Agent container, in case of multiple agents running in parallel.
+	//std::vector<Agent> AgentContainer;						//Agent container, in case of multiple agents running in parallel.
 
 	APStatistics statistics;												//Statistics gathered to generate a final report.
 
@@ -52,7 +52,7 @@ public:
 
 	//Member functions
 	void Initialization();														//Function that creates interfaces, agents and sets the initial configuration.
-	Flow CreateFlow(int, int, std::string);						//When the application fires the activation trigger, a new flow is created.
+	Flow CreateFlow(int, int, std::string, double);		//When the application fires the activation trigger, a new flow is created.
 	void AcceptIncomingFlow(Flow &f);									//Function to accepts a new incoming flow.
 	void RegisterAT(Flow &f);													//Function to register the airtime of the new incoming flow.
 	void NotifyApp(std::string, int);									//Function to send notifications by using the CrtlApp outport.
@@ -61,6 +61,7 @@ public:
 	//void NotifyAgent(AgentNotification &n);					//Function to send notifications by using the CrtlAgent outport.
 	void Send(Flow &f);																//Function to send flow by using the DataSTa ouport.
 	void CollectStatistics(Flow *f);									//Function to update statistics at the AP.
+	void UpdateEFlowLosses(int, double, double);			//Function to update and keep track of flow losses for ealstic flows only.
 };
 
 AP::AP (){
@@ -103,7 +104,7 @@ void AP::Initialization(){
 		APInterface interface;
 		interface.id = i;
 		//interface.ChN = Channels[i].at(IntChN(gen));
-		interface.ChN = Channels[i].at(0);
+		interface.ChN = Channels[i].at(1);
 		std::pair<double, int> p = GetFromChN(interface.ChN);
 		interface.fc = p.first;
 		interface.ChW = p.second;
@@ -278,21 +279,35 @@ Function to create new flows. It is triggered by the start timer on the applicat
 class. The BW selected is expressed in Mbps.
 ---------------------------------------------------------------------------------- */
 
-Flow AP::CreateFlow(int src, int dest, std::string type){
+Flow AP::CreateFlow(int src, int dest, std::string type, double t){
 
 	Flow flow;
 	flow.setSender(src);
 	flow.setDestination(dest);
 	flow.setType(type);
 	flow.setTimeStamp(SimTime());
+	flow.setDuration(t);
 
 	if (type.compare("STREAMING")==0){
-		std::uniform_real_distribution<double>BWGen(1, 1);
+		std::uniform_int_distribution<int>BWGen(5, 5);
 		flow.setLength(BWGen(gen));
 	}
 	else{
 		std::uniform_real_distribution<double>BWGen(2, medBW);
-		flow.setLength(BWGen(gen));
+		double B = BWGen(gen);
+		for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+			if (AssociatedSTAs.at(i).id == dest){
+				if (AssociatedSTAs.at(i).EFlowLoss !=0){
+					//std::cout << "Elastic losses: " << AssociatedSTAs.at(i).EFlowLoss << " for dest: " << dest << " flow t: " << t << " rand B: " << B;
+					B += AssociatedSTAs.at(i).EFlowLoss/(t);
+					//std::cout << " new B with losses: " << B <<std::endl;
+					flow.setLength(B);
+				}
+				else{
+					flow.setLength(B);
+				}
+			}
+		}
 	}
 
 	return flow;
@@ -389,10 +404,9 @@ void AP::NotifySTA(std::string type, Notification *n){
 						}
 					}
 				}
-
+				
 				//Message to initialize an application for this station.
 				NotifyApp("CTRL_START", n->getSender());
-
 
 				//Send notification
 				Notification notification ("MLO_SETUP_RESP", apID, n->getSender());
@@ -509,7 +523,7 @@ void AP::inCtrlApp(AppCTRL &n){
 			for (int i=0; i<(int)AssociatedSTAs.size(); i++){
 				if (n.getDestination() == AssociatedSTAs.at(i).id){
 
-					Flow flow = CreateFlow(apID, n.getDestination(), AssociatedSTAs.at(i).traffic_type);
+					Flow flow = CreateFlow(apID, n.getDestination(), AssociatedSTAs.at(i).traffic_type, n.getDuration());
 					std::string policy_type = policy_manager.getType();
 
 					if (policy_type.compare("MSLA") == 0){
@@ -524,8 +538,8 @@ void AP::inCtrlApp(AppCTRL &n){
 					else if (policy_type.compare("VIDEO_DATA_SPLIT") == 0){
 						policy_manager.AllocationFromPolicySplit(&flow, AssociatedSTAs, InterfaceContainer);
 					}
-
 					AcceptIncomingFlow(flow);
+
 					break;
 				}
 			}
@@ -551,9 +565,12 @@ void AP::inCtrlApp(AppCTRL &n){
 
 					Notification notification ("FLOW_END", apID, OnGoingFlows.at(i).getDestination());
 					NotifySTA("FLOW_END", &notification);
-					NotifyNeighbors("FLOW_END", &FTxTimes, &FlowFc);
 					CollectStatistics(&OnGoingFlows.at(i));
 					OnGoingFlows.erase(OnGoingFlows.begin()+i);
+
+					NotifySTA("SAT_UPDATE", nullptr);
+					NotifyNeighbors("FLOW_END", &FTxTimes, &FlowFc);
+
 					break;
 				}
 			}
@@ -577,8 +594,6 @@ and purposes.
 void AP::CollectStatistics(Flow *flow){
 
  if (flow != nullptr){
-	 double drop_Ratio = flow->getDratio();
-	 statistics.AvgDRPerFlow.push_back(drop_Ratio);
 	 std::vector<double> ChOcc((int)InterfaceContainer.size(), -1), ChRew((int)InterfaceContainer.size(), -1);
 	 for (int i=0; i<(int)InterfaceContainer.size(); i++){
 		 ChOcc.at(i) = std::min(1.0,InterfaceContainer.at(i).TOcc);
@@ -587,6 +602,15 @@ void AP::CollectStatistics(Flow *flow){
 	 statistics.ChOcc.push_back(ChOcc);
 	 statistics.ChReward.push_back(ChRew);
 	 statistics.SimT.push_back(SimTime());
+
+	 double drop_Ratio = flow->getDratio();
+	 std::string flow_type = flow->getType();
+	 if (flow_type.compare("ELASTIC") == 0){
+		 UpdateEFlowLosses(flow->getDestination(), flow->getLength(), drop_Ratio);
+	 }
+	 else{
+		 statistics.AvgDRPerFlow.push_back(drop_Ratio);
+	 }
  }
  else{
 	 std::vector<double> ChOcc((int)InterfaceContainer.size(), -1), ChRew((int)InterfaceContainer.size(), -1);
@@ -599,6 +623,19 @@ void AP::CollectStatistics(Flow *flow){
 	 statistics.SimT.push_back(SimTime());
 	}
 }
+
+/* ----------------------------------------------------------------------------------
+Function that tracks the flow losses for elastic flows only.
+---------------------------------------------------------------------------------- */
+
+void AP::UpdateEFlowLosses(int destination, double length, double dratio){
+	for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+		if (AssociatedSTAs.at(i).id == destination){
+			AssociatedSTAs.at(i).EFlowLoss = length*dratio;
+		}
+	}
+}
+
 
 /* ----------------------------------------------------------------------------------
 To be implemented: Function to perfom machine learning based decisions regarding a

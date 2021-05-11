@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+Code/Main/neko
+
+Code/Main/neko\.cxx

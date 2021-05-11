@@ -109,7 +109,7 @@ void Neko :: GenerateRandom(){
 	double Xaxis = 40;
 	double Yaxis = 30;
 	int numOfAPs = 3;
-	int stationsPerAP = 25;
+	int stationsPerAP = 20;
 	std::vector<int> stations(numOfAPs,0.0);
 
 	int numOfStations = 0;
@@ -168,15 +168,17 @@ void Neko :: GenerateRandom(){
 			}
 		}
 
+		std::cout << "ELASTIC: " << std::round(stations.at(i)*0.8) << " STREAMING: " <<stations.at(i) - std::round(stations.at(i)*0.8) << std::endl;
 		std::uniform_real_distribution<double> rad(1.0, 8.0); //Max distance for worst case scenario (highest fc, highest ChW) for the 2.4GHz band
-		for (int j=0; j<stations.at(i); j++){
+		//for (int j=0; j<stations.at(i); j++){
+		for (int j=0; j<std::round(stations.at(i)*0.8); j++){
 			double r = rad(generator);
 			double theta = 2*M_PI*drand48();
 			AppContainer[index].destID = index;
 			STAContainer[index].staID = index;
 			STAContainer[index].servingAP = APContainer[i].apID;
-			STAContainer[index].traffic_type = (Random()>0.8) ? "STREAMING" : "ELASTIC";
-			//STAContainer[index].traffic_type = "ELASTIC";
+			//STAContainer[index].traffic_type = (Random()>0.8) ? "STREAMING" : "ELASTIC";
+			STAContainer[index].traffic_type = "ELASTIC";
 			STAContainer[index].coordinates.x = APContainer[i].coordinates.x + r*std::cos(theta);
 			STAContainer[index].coordinates.y = APContainer[i].coordinates.y + r*std::sin(theta);
 			STAContainer[index].coordinates.z = 1.5;
@@ -193,6 +195,38 @@ void Neko :: GenerateRandom(){
 			station.coord.y = STAContainer[index].coordinates.y;
 			station.coord.z = STAContainer[index].coordinates.z;
 			station.traffic_type = STAContainer[index].traffic_type;
+			station.EFlowLoss = 0.0;
+			APContainer[i].AssociatedSTAs.push_back(station);
+
+			index++;
+		}
+
+		rad = std::uniform_real_distribution<double>(1.0, 3.0);
+		for (int j=0; j<(stations.at(i)-std::round(stations.at(i)*0.8)); j++){
+			double r = rad(generator);
+			double theta = 2*M_PI*drand48();
+			AppContainer[index].destID = index;
+			STAContainer[index].staID = index;
+			STAContainer[index].servingAP = APContainer[i].apID;
+			//STAContainer[index].traffic_type = (Random()>0.8) ? "STREAMING" : "ELASTIC";
+			STAContainer[index].traffic_type = "STREAMING";
+			STAContainer[index].coordinates.x = APContainer[i].coordinates.x + r*std::cos(theta);
+			STAContainer[index].coordinates.y = APContainer[i].coordinates.y + r*std::sin(theta);
+			STAContainer[index].coordinates.z = 1.5;
+			STAContainer[index].configuration.TxPower = 15;
+			STAContainer[index].configuration.CCA = -82;
+			STAContainer[index].configuration.nSS = 2;
+			STAContainer[index].capabilities.IEEEProtocol = 2;
+			STAContainer[index].capabilities.Multilink = true;
+			STAContainer[index].capabilities.Mlearning = false;
+
+			WifiSTA station;
+			station.id = index;
+			station.coord.x = STAContainer[index].coordinates.x;
+			station.coord.y = STAContainer[index].coordinates.y;
+			station.coord.z = STAContainer[index].coordinates.z;
+			station.traffic_type = STAContainer[index].traffic_type;
+			station.EFlowLoss = 0.0;
 			APContainer[i].AssociatedSTAs.push_back(station);
 
 			index++;
@@ -244,10 +278,10 @@ void Neko::GenerateResultReport(){
 	}
 	if (stats_report){
 		FILE* StatsReport = fopen("../Output/Stats.txt","a");
-		fprintf(StatsReport, "*******************\n");
-		fprintf(StatsReport, "Simultation seed: %i\n", seed);
-		fprintf(StatsReport, "Avg_Sat; Avg_Th; Avg_Dratio\n");
-
+		//fprintf(StatsReport, "*******************\n");
+		//fprintf(StatsReport, "Simultation seed: %i\n", seed);
+		//fprintf(StatsReport, "Seed; Avg_Sat; Avg_Th; Avg_Dratio\n");
+		fprintf(StatsReport, "%i; ", seed);
 		double TotalSatAvg = 0, TotalThAvg = 0;
 		for (int i=0; i<(int)STAContainer.size(); i++){
 			TotalSatAvg += std::accumulate(STAContainer[i].statistics.AvgSatPerFlow.begin(), STAContainer[i].statistics.AvgSatPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgSatPerFlow.size();

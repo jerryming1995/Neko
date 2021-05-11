@@ -218,28 +218,6 @@ void STA::inCrtlAP(Notification &n){
 			CalculateStats();
 		}
 	}
-	else{
-		std::string type = n.getType();
-		if ((type.compare("SAT_UPDATE") == 0) && (state.compare("ACTIVE") == 0)){
-
-			std::vector<double> satisfaction = n.getSat();
-			flow.setSat(satisfaction);
-
-			std::vector<double> Fc = n.getFc();
-			std::vector<double> sat_evolution (InterfaceContainer.size(), 0.0);
-			std::vector<double> sim_time (InterfaceContainer.size(), 0.0);
-
-			for (int j=0; j<(int)InterfaceContainer.size(); j++){
-				if ((satisfaction.at(j) != -1) && (InterfaceContainer.at(j).active)){
-					sat_evolution.at(j) = satisfaction.at(j);
-					sim_time.at(j) = SimTime();
-					break;
-				}
-			}
-			statistics.SatEvo.push_back(sat_evolution);
-			statistics.SimT.push_back(sim_time);
-		}
-	}
 }
 
 /* ----------------------------------------------------------------------------------
@@ -331,8 +309,12 @@ Function to get the statistics of the ongoing flow.
 void STA::CalculateStats(){
 
 	double satisfaction = flow.getSatisfaction();
+	//double duration = flow.getDuration();
+	//double rtx_data = flow.getLength()*flow.getDratio();
+
 	statistics.AvgSatPerFlow.push_back(satisfaction);
 	statistics.AvgThPerFlow.push_back(satisfaction*flow.getLength());
+	//std::cout << "TO: " << flow.getDestination() << " satisfaction: " << satisfaction << " d_ratio: " << flow.getDratio() << " Length: " << flow.getLength() << " Throughput: " << satisfaction*flow.getLength() << std::endl;
 }
 
 #endif

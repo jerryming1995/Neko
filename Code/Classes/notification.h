@@ -68,7 +68,8 @@ private:
 
 	int _sender;
 	int _destination;
-
+	double _duration;
+	
 	std::string _tprofile;
 
 public:
@@ -77,10 +78,11 @@ public:
 
 	//Setters
 	void setTProfile(std::string);
-
+	void setDuration(double);
 	//Getters
 	std::string getType();
 	int getSender();
 	int getDestination();
 	std::string getTProfile();
+	double getDuration();
 };

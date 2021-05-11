@@ -27,6 +27,11 @@ void Flow::setDestination(int destination){
 	_destination = destination;
 }
 
+void Flow::setDuration(double duration){
+
+	_duration = duration;
+}
+
 void Flow::setTimeStamp(double timestamp){
 
 	_timestamp = timestamp;
@@ -83,6 +88,11 @@ std::vector<double> Flow::getTxTime(){
 std::vector<double> Flow::getFc(){
 
 	return _Fc;
+}
+
+double Flow::getDuration(){
+
+	return _duration;
 }
 
 double Flow::getTimeStamp(){
@@ -150,6 +160,7 @@ double Flow::getSatisfaction(){
 	double avg_flow = 0, sat_interface = 0, avg_satisfaction = 0;
 	for (int i=0; i<(int)_Sat.size(); i++){
 		for (int j=0; j<(int)_Sat[i].size(); j++){
+			//std::cout << "dest: " << _destination << " size: " << _Sat[i].size() << std::endl;
 			if (_Sat[i].at(j) != -1){
 				sat_interface += _Sat[i].at(j);   //Accumulate all the entries for the i_th interface
 				counter++;											  //Count the number of entries registered during the flow for that interface
