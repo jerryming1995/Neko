@@ -177,7 +177,6 @@ void Neko :: GenerateRandom(){
 			AppContainer[index].destID = index;
 			STAContainer[index].staID = index;
 			STAContainer[index].servingAP = APContainer[i].apID;
-			//STAContainer[index].traffic_type = (Random()>0.8) ? "STREAMING" : "ELASTIC";
 			STAContainer[index].traffic_type = "ELASTIC";
 			STAContainer[index].coordinates.x = APContainer[i].coordinates.x + r*std::cos(theta);
 			STAContainer[index].coordinates.y = APContainer[i].coordinates.y + r*std::sin(theta);
@@ -186,7 +185,7 @@ void Neko :: GenerateRandom(){
 			STAContainer[index].configuration.CCA = -82;
 			STAContainer[index].configuration.nSS = 2;
 			STAContainer[index].capabilities.IEEEProtocol = 2;
-			STAContainer[index].capabilities.Multilink = true;
+			STAContainer[index].capabilities.Multilink = false;
 			STAContainer[index].capabilities.Mlearning = false;
 
 			WifiSTA station;
@@ -208,7 +207,6 @@ void Neko :: GenerateRandom(){
 			AppContainer[index].destID = index;
 			STAContainer[index].staID = index;
 			STAContainer[index].servingAP = APContainer[i].apID;
-			//STAContainer[index].traffic_type = (Random()>0.8) ? "STREAMING" : "ELASTIC";
 			STAContainer[index].traffic_type = "STREAMING";
 			STAContainer[index].coordinates.x = APContainer[i].coordinates.x + r*std::cos(theta);
 			STAContainer[index].coordinates.y = APContainer[i].coordinates.y + r*std::sin(theta);
@@ -217,7 +215,7 @@ void Neko :: GenerateRandom(){
 			STAContainer[index].configuration.CCA = -82;
 			STAContainer[index].configuration.nSS = 2;
 			STAContainer[index].capabilities.IEEEProtocol = 2;
-			STAContainer[index].capabilities.Multilink = true;
+			STAContainer[index].capabilities.Multilink = false;
 			STAContainer[index].capabilities.Mlearning = false;
 
 			WifiSTA station;
@@ -280,14 +278,25 @@ void Neko::GenerateResultReport(){
 		FILE* StatsReport = fopen("../Output/Stats.txt","a");
 		//fprintf(StatsReport, "*******************\n");
 		//fprintf(StatsReport, "Simultation seed: %i\n", seed);
-		//fprintf(StatsReport, "Seed; Avg_Sat; Avg_Th; Avg_Dratio\n");
+		//fprintf(StatsReport, "Seed; Avg_Sat_Streaming; Avg_Th_Streaming; AvgIdeal_Th_Streaming; Avg_Sat_Elastic; Avg_Th_Elastic; AvgIdeal_Th_Elastic; Avg_Dratio\n");
 		fprintf(StatsReport, "%i; ", seed);
-		double TotalSatAvg = 0, TotalThAvg = 0;
+		int streaming_stas = 0, elastic_stas = 0;
+		double TotalSatAvg_streaming = 0, TotalThAvg_streaming = 0, TotalSatAvg_elastic = 0, TotalThAvg_elastic = 0, IdealTh_streaming = 0, IdealTh_elastic = 0;
 		for (int i=0; i<(int)STAContainer.size(); i++){
-			TotalSatAvg += std::accumulate(STAContainer[i].statistics.AvgSatPerFlow.begin(), STAContainer[i].statistics.AvgSatPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgSatPerFlow.size();
-			TotalThAvg += std::accumulate(STAContainer[i].statistics.AvgThPerFlow.begin(), STAContainer[i].statistics.AvgThPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgThPerFlow.size();
+			if(STAContainer[i].traffic_type.compare("STREAMING") == 0){
+				TotalSatAvg_streaming += std::accumulate(STAContainer[i].statistics.AvgSatPerFlow.begin(), STAContainer[i].statistics.AvgSatPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgSatPerFlow.size();
+				TotalThAvg_streaming += std::accumulate(STAContainer[i].statistics.AvgThPerFlow.begin(), STAContainer[i].statistics.AvgThPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgThPerFlow.size();
+				IdealTh_streaming += std::accumulate(STAContainer[i].statistics.AvgIdealThPerFlow.begin(), STAContainer[i].statistics.AvgIdealThPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgIdealThPerFlow.size();
+				streaming_stas++;
+			}
+			else{
+				TotalSatAvg_elastic += std::accumulate(STAContainer[i].statistics.AvgSatPerFlow.begin(), STAContainer[i].statistics.AvgSatPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgSatPerFlow.size();
+				TotalThAvg_elastic += std::accumulate(STAContainer[i].statistics.AvgThPerFlow.begin(), STAContainer[i].statistics.AvgThPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgThPerFlow.size();
+				IdealTh_elastic += std::accumulate(STAContainer[i].statistics.AvgIdealThPerFlow.begin(), STAContainer[i].statistics.AvgIdealThPerFlow.end(),0.0)/(int)STAContainer[i].statistics.AvgIdealThPerFlow.size();
+				elastic_stas++;
+			}
 		}
-		fprintf(StatsReport, "%f; %f; ", TotalSatAvg/(int)STAContainer.size(), TotalThAvg);
+		fprintf(StatsReport, "%f; %f; %f; %f; %f; %f; ", TotalSatAvg_streaming/streaming_stas, TotalThAvg_streaming, IdealTh_streaming, TotalSatAvg_elastic/elastic_stas, TotalThAvg_elastic, IdealTh_elastic);
 
 		double TotalAvgDrop = 0;
 		for (int i=0; i<(int)APContainer.size(); i++){

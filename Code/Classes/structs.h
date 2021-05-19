@@ -70,4 +70,5 @@ struct STAStatistics{
 	std::vector<std::vector<double>> SimT;					//Simulation Time that follows the channel occupancy for each interface
 	std::vector<double> AvgSatPerFlow;
 	std::vector<double> AvgThPerFlow;
+	std::vector<double> AvgIdealThPerFlow;
 };

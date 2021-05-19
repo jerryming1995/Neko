@@ -49,6 +49,7 @@ public:
 	void NotifyAP(std::string, std::vector<double> *v);
 	void DoMLOSetup(Notification &n);
 	void UpdateInterfaces(Notification &n);
+	void SingleBandSetup(Notification &n);
 	void CalculateStats();
 };
 
@@ -92,7 +93,6 @@ void STA::Initialization(){
 	else{
 		STAInterface interface;
 		interface.id = 0;
-		interface.active = true;
 		InterfaceContainer.push_back(interface);
 	}
 	NotifyAP("PROBE_REQ", nullptr);
@@ -118,6 +118,11 @@ void STA::NotifyAP(std::string type, std::vector<double> *v){
 		Notification notification ("CONFIG_REQ", staID, servingAP);
 		outCtrlAP(notification);
 	}
+	else if (type.compare("ASSOCIATION_REQ") == 0){
+		Notification notification ("ASSOCIATION_REQ", staID, servingAP);
+		notification.setLinkQuality(*v);
+		outCtrlAP(notification);
+	}
 	else if (type.compare("MLO_SETUP_REQ") == 0){
 		Notification notification ("MLO_SETUP_REQ", staID, servingAP);
 		notification.setLinkQuality(*v);
@@ -137,6 +142,8 @@ set of nearby APs.
 - CONFIG_RESP -> The serving AP asnwers back with the config for the association link.
 Upon this message, if the STA is MLO capable calculates the linkQ and sends it back
 to perform the MLO configuration.
+- ASSOCIATION_RESP -> Only used for single band stations. Once stations send the REQ
+frame, the AP sends back the response with the link confirmation.
 - MLO_SETUP_RESP -> After evaluating the linkQ, the AP sends back the links available
 to perform the MLO operation.
 - CHANNEL_SWITCH_STA -> If the AP changes its configuration, it notifies the sta.
@@ -157,15 +164,35 @@ void STA::inCrtlAP(Notification &n){
 		}
 		else if (type.compare("CONFIG_RESP") == 0){
 			if (!capabilities.Multilink){
-				std::vector<double> fc = n.getFc();
-				InterfaceContainer.at(0).fc = fc.at(0);
+				SingleBandSetup(n);
 			}
 			else{
 				DoMLOSetup(n);
 			}
 		}
+		else if (type.compare("ASSOCIATION_RESP") == 0){
+
+			/*This command must be set in order to reuse function for channel switch announcements*/
+			InterfaceContainer.at(0).active = false;
+
+			std::vector<double> LinkFc = n.getFc();
+			std::string band = GetBand(LinkFc.at(0));
+			if (band.compare("2_4GHz") == 0){
+				InterfaceContainer.at(0).fc = LinkFc.at(0);
+				InterfaceContainer.at(0).active = true;
+			}
+			else if (band.compare("5GHz") == 0){
+				InterfaceContainer.at(0).fc = LinkFc.at(0);
+				InterfaceContainer.at(0).active = true;
+			}
+			else if (band.compare("6GHz") == 0){
+				InterfaceContainer.at(0).fc = LinkFc.at(0);
+				InterfaceContainer.at(0).active = true;
+			}
+		}
 		else if (type.compare("MLO_SETUP_RESP") == 0){
 
+			/*This command must be set in order to reuse function for channel switch announcements*/
 			for (int i=0; i<(int)InterfaceContainer.size(); i++){
 				InterfaceContainer.at(i).active = false;
 			}
@@ -273,6 +300,26 @@ void STA::DoMLOSetup(Notification &n){
 }
 
 /* ----------------------------------------------------------------------------------
+Function that performs a random band selection. Its purpose is to allow single band
+stations to be connected to a random interface within the interfaces that meet
+the quality criteria.
+---------------------------------------------------------------------------------- */
+
+void STA::SingleBandSetup(Notification &n){
+
+	Position AP_coord = n.getPosition();
+	std::vector<double> fc = n.getFc();
+	std::vector<double> linkQ;
+
+	for (int i=0; i<(int)fc.size(); i++){
+		double RSSI = CalculateRSSI(configuration.TxPower, fc.at(i), AP_coord.x, AP_coord.y, AP_coord.z, coordinates.x, coordinates.y, coordinates.z);
+		linkQ.push_back(RSSI);
+	}
+
+	NotifyAP("ASSOCIATION_REQ", &linkQ);
+}
+
+/* ----------------------------------------------------------------------------------
 Function that updates the configuration of each interface upon channel switch event
 triggered by the serving AP. If the station is MLO the links are checked in order to
 check if they still meet the quality criteria.
@@ -314,6 +361,7 @@ void STA::CalculateStats(){
 
 	statistics.AvgSatPerFlow.push_back(satisfaction);
 	statistics.AvgThPerFlow.push_back(satisfaction*flow.getLength());
+	statistics.AvgIdealThPerFlow.push_back(flow.getLength());
 	//std::cout << "TO: " << flow.getDestination() << " satisfaction: " << satisfaction << " d_ratio: " << flow.getDratio() << " Length: " << flow.getLength() << " Throughput: " << satisfaction*flow.getLength() << std::endl;
 }
 

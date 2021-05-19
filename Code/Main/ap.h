@@ -89,7 +89,7 @@ Upon start, the AP is initialized by creating the interfaces and selecting Chann
 The channel selection established a pair of frequency and bandwidth.
 
 - If MLO enabled, the policy is set as the defined by the user. Otherwise, it is set
-by the default value of ALL_ONE.
+by the default value of SLCI.
 - If Machine learning is enabled, it must contain the agent creation
 and configuration.
 ---------------------------------------------------------------------------------- */
@@ -115,7 +115,7 @@ void AP::Initialization(){
 		policy_manager.setType(policy);
 	}
 	else{
-		policy_manager.setType("ALL_ONE");
+		policy_manager.setType("SLCI");
 	}
 
 	NotifyNeighbors("AP_NEIGHBOR_DISCOVERY", nullptr, nullptr);
@@ -298,9 +298,7 @@ Flow AP::CreateFlow(int src, int dest, std::string type, double t){
 		for (int i=0; i<(int)AssociatedSTAs.size(); i++){
 			if (AssociatedSTAs.at(i).id == dest){
 				if (AssociatedSTAs.at(i).EFlowLoss !=0){
-					//std::cout << "Elastic losses: " << AssociatedSTAs.at(i).EFlowLoss << " for dest: " << dest << " flow t: " << t << " rand B: " << B;
 					B += AssociatedSTAs.at(i).EFlowLoss/(t);
-					//std::cout << " new B with losses: " << B <<std::endl;
 					flow.setLength(B);
 				}
 				else{
@@ -309,7 +307,6 @@ Flow AP::CreateFlow(int src, int dest, std::string type, double t){
 			}
 		}
 	}
-
 	return flow;
 }
 
@@ -357,7 +354,9 @@ void AP::RegisterAT(Flow &f){
 /* ----------------------------------------------------------------------------------
 Function that performs actions according to the control messages.
 - PROBE_RESP -> Probe response to the sender. For discovery purposes.
+- CONFIG_RESP -> Returns fc configuration for each interface.
 - MLO_SETUP_RESP -> It performs the MLO setup request according to the link quality.
+- ASSOCIATION_RESP -> Perform association for single band stations.
 - SAT_UPDATE -> Announces changes in satisfaction values to stations with alive flows.
 - FLOW_END -> Inform that a flow has ended.
 ---------------------------------------------------------------------------------- */
@@ -378,6 +377,55 @@ void AP::NotifySTA(std::string type, Notification *n){
 			notification.setFc(InterfaceContainer.at(i).fc);
 		}
 		outCtrlSTA(notification);
+	}
+	else if (type.compare("ASSOCIATION_RESP") == 0){
+		for (int i=0; i<(int)AssociatedSTAs.size(); i++){
+			if (AssociatedSTAs.at(i).id == n->getSender()){
+
+				/* Clear vectors. Its purpose is to reuse the same function when stations perform reassociation with other APs*/
+				AssociatedSTAs.at(i).fc.clear();
+				AssociatedSTAs.at(i).RSSI.clear();
+				AssociatedSTAs.at(i).SNR.clear();
+				AssociatedSTAs.at(i).TxRate.clear();
+
+				/*First, check link availability in order to later select one randomly*/
+				std::vector<double> sta_linkQ = n->getLinkQuality();
+				std::vector<int> available_links;
+				for (int j=0; j<(int)sta_linkQ.size(); j++){
+					if (sta_linkQ.at(j) >= configuration.CCA){
+						double Dl_RSSI = CalculateRSSI(configuration.TxPower, InterfaceContainer.at(j).fc, coordinates.x, coordinates.y, coordinates.z, AssociatedSTAs.at(i).coord.x, AssociatedSTAs.at(i).coord.y, AssociatedSTAs.at(i).coord.z);
+						double Dl_SNR = CalculateSNR(Dl_RSSI, InterfaceContainer.at(j).ChW);
+						double Dl_TxRate = CalculateDataRate(Dl_SNR, InterfaceContainer.at(j).fc, InterfaceContainer.at(j).ChW, capabilities, configuration);
+
+						if (Dl_TxRate != 0){
+							available_links.push_back(InterfaceContainer.at(j).ChN);
+						}
+					}
+				}
+
+				/*Once, link quality has been checked, select one randomly from the set of available links*/
+				if ((int)available_links.size() != 0){
+					std::uniform_int_distribution<int>ChSel(0, (int)available_links.size()-1);
+					std::pair<double, int> ChInfo = GetFromChN(available_links.at(ChSel(gen)));
+					double Dl_RSSI = CalculateRSSI(configuration.TxPower, ChInfo.first, coordinates.x, coordinates.y, coordinates.z, AssociatedSTAs.at(i).coord.x, AssociatedSTAs.at(i).coord.y, AssociatedSTAs.at(i).coord.z);
+					double Dl_SNR = CalculateSNR(Dl_RSSI, ChInfo.second);
+					double Dl_TxRate = CalculateDataRate(Dl_SNR, ChInfo.first, ChInfo.second, capabilities, configuration);
+
+					AssociatedSTAs.at(i).fc.push_back(ChInfo.first);
+					AssociatedSTAs.at(i).RSSI.push_back(Dl_RSSI);
+					AssociatedSTAs.at(i).SNR.push_back(Dl_SNR);
+					AssociatedSTAs.at(i).TxRate.push_back(Dl_TxRate);
+				}
+
+				//Message to initialize an application for this station.
+				NotifyApp("CTRL_START", n->getSender());
+
+				//Send notification
+				Notification notification ("ASSOCIATION_RESP", apID, n->getSender());
+				notification.setFc(AssociatedSTAs.at(i).fc);
+				outCtrlSTA(notification);
+			}
+		}
 	}
 	else if (type.compare("MLO_SETUP_RESP") == 0){
 		for (int i=0; i<(int)AssociatedSTAs.size(); i++){
@@ -404,7 +452,6 @@ void AP::NotifySTA(std::string type, Notification *n){
 						}
 					}
 				}
-				
 				//Message to initialize an application for this station.
 				NotifyApp("CTRL_START", n->getSender());
 
@@ -416,7 +463,6 @@ void AP::NotifySTA(std::string type, Notification *n){
 		}
 	}
 	else if (type.compare("SAT_UPDATE") == 0){
-
 		for (int i=0; i<(int)OnGoingFlows.size(); i++){
 			std::vector<double> fc = OnGoingFlows.at(i).getFc();
 			std::vector<double> txtimes = OnGoingFlows.at(i).getTxTime();
@@ -445,11 +491,9 @@ void AP::NotifySTA(std::string type, Notification *n){
 }
 
 /* ----------------------------------------------------------------------------------
-Function that manages the control messages sent by stations to the AP.
-- PROBE_REQ -> Request essential information for discovery.
-- MLO_SETUP_REQ -> Request a MLO setup according to the quality criteria.
-- UPDATE_MLO -> In caso of reassociation, perform an update the MLO links.
-- STA_DEASSOCIATION -> Deassociate STA from the AP.
+Function that manages the control messages sent by stations to the App.
+- CTRL_START -> Notify to the application that it can be initiated.
+- CTRL_CANCEL -> Notify to the application that must be stopped.
 ---------------------------------------------------------------------------------- */
 
 void AP::NotifyApp(std::string type, int destination){
@@ -473,7 +517,9 @@ void AP::NotifyApp(std::string type, int destination){
 /* ----------------------------------------------------------------------------------
 Function that manages the control messages sent by stations to the AP.
 - PROBE_REQ -> Request essential information for discovery.
+- CONFIG_REQ -> Request frequency configuration for each interface.
 - MLO_SETUP_REQ -> Request a MLO setup according to the quality criteria.
+- ASSOCIATION_REQ -> Triggers association process for single band stations.
 - UPDATE_MLO -> In case of reassociation, perform an update the MLO links.
 - STA_DEASSOCIATION -> Deassociate STA from the AP.
 ---------------------------------------------------------------------------------- */
@@ -481,13 +527,15 @@ Function that manages the control messages sent by stations to the AP.
 void AP::inCtrlSTA(Notification &n){
 
 	std::string type = n.getType();
-
 	if (n.getDestination() == apID){
 		if (type.compare("PROBE_REQ") == 0){
 			NotifySTA("PROBE_RESP", &n);
 		}
-		if (type.compare("CONFIG_REQ") == 0){
+		else if (type.compare("CONFIG_REQ") == 0){
 			NotifySTA("CONFIG_RESP", &n);
+		}
+		else if (type.compare("ASSOCIATION_REQ") == 0){
+			NotifySTA("ASSOCIATION_RESP", &n);
 		}
 		else if(type.compare("MLO_SETUP_REQ") == 0){
 			NotifySTA("MLO_SETUP_RESP", &n);
@@ -535,7 +583,7 @@ void AP::inCtrlApp(AppCTRL &n){
 					else if (policy_type.compare("MCAA") == 0){
 						policy_manager.AllocationFromPolicyFixed(&flow, AssociatedSTAs, InterfaceContainer);
 					}
-					else if (policy_type.compare("VIDEO_DATA_SPLIT") == 0){
+					else if (policy_type.compare("VDS") == 0){
 						policy_manager.AllocationFromPolicySplit(&flow, AssociatedSTAs, InterfaceContainer);
 					}
 					AcceptIncomingFlow(flow);
